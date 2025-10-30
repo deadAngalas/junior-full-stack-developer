@@ -1,0 +1,144 @@
+.header {
+  background-color: #ffffff;
+  z-index: 1000;
+  position: sticky;
+  top: 0;
+  height: 80px;
+  font-size: 16px;
+  padding: 0 101px;
+}
+
+.nav {
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  color: #1D1F22;
+}
+
+.nav-left {
+  display: flex;
+  padding-top: 20px;
+}
+
+.nav-right {
+  margin-left: auto;
+}
+
+.nav-right .cart-icon {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.category {
+  color: black;
+  display: flex;
+  height: 52px;
+  text-transform: uppercase;
+  box-sizing: border-box;
+  padding: 0 16px;
+}
+
+.category:hover {
+  color: #007e22;
+  cursor: pointer;
+}
+
+.category.active {
+  color: #5ECE7B;
+  font-weight: 600;
+  border-bottom: 2px solid #5ECE7B;
+}
+
+.header__logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.header__logo .logo-box {
+  display: flex;
+}
+
+.logo-icon {
+  width: 41px;
+  height: 41px;
+}
+
+/* === BURGER === */
+
+.burger {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 24px;
+  height: 18px;
+  cursor: pointer;
+  margin-right: 16px;
+  margin-bottom: 16px;
+}
+
+.burger span {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background-color: #1D1F22;
+  border-radius: 2px;
+  transition: 0.3s;
+}
+
+/* === MOBILE === */
+@media (max-width: 900px) {
+  .burger {
+    display: flex;
+  }
+
+  .categories {
+    display: none;
+  }
+
+  .categories.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 80px;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #ddd;
+    padding: 10px 0;
+    z-index: 999;
+    animation: slideDown 0.3s ease forwards;
+  }
+
+  .categories.open .category {
+    padding: 14px 20px;
+    border-bottom: 1px solid #f2f2f2;
+    height: auto;
+  }
+
+  .categories.open .category:last-child {
+    border-bottom: none;
+  }
+}
+
+/* === DESKTOP === */
+@media (min-width: 901px) {
+  .burger {
+    display: none;
+  }
+
+  .categories {
+    display: flex !important;
+    flex-direction: row;
+    position: static;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
+  .category {
+    border-bottom: none;
+  }
+}
