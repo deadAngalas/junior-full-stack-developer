@@ -43,6 +43,7 @@
   align-items: center;
   justify-content: center;
 }
+
 .gallery-main img {
   width: 100%;
   height: 100%;
@@ -119,6 +120,7 @@
   line-height: 18px;
   transition: all 0.15s ease;
   box-sizing: border-box;
+  padding: 0; /* reset global button padding so width/height are exact */
 }
 
 .attr-item:hover, .size-button:hover {
@@ -199,7 +201,7 @@
 
 
 /* ===== MOBILE ===== */
-@media (max-width: 900px) {
+@media (max-width: 1368px) {
   .product-details-three-col {
     flex-direction: column;
     align-items: center;
@@ -244,6 +246,7 @@
     width: 100%;
     max-width: 500px;
     text-align: left;
+    margin-right: 10px;
   }
 
   .product-title {

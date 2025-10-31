@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import "./MainContent.css";
+import { addToCart } from '../utils/cart';
 
 export default function MainContent({ activeCategory, products }) {
   const navigate = useNavigate();
@@ -44,7 +45,35 @@ export default function MainContent({ activeCategory, products }) {
               </p>
             </div>
 
-            {p.in_stock && <div className="hover-icon"></div>}
+            {p.in_stock && (
+              <div
+                className="hover-icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // build default attributes: pick first item from each attribute set
+                  const defaultAttributes = (p.attributes || []).map((aset) => {
+                    const first = aset.items && aset.items.length ? aset.items[0] : null;
+                    return first
+                      ? {
+                          attributeId: aset.id,
+                          attributeName: aset.name,
+                          itemId: first.id,
+                          value: first.value,
+                          displayValue: first.displayValue || first.value,
+                        }
+                      : {
+                          attributeId: aset.id,
+                          attributeName: aset.name,
+                          itemId: null,
+                          value: null,
+                          displayValue: null,
+                        };
+                  });
+
+                  addToCart(p, defaultAttributes, 1);
+                }}
+              ></div>
+            )}
           </div>
         ))}
       </div>

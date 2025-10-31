@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchProducts } from '../api/productService';
 import parse from 'html-react-parser';
+import { addToCart } from '../utils/cart';
 import './ProductDetails.css';
 
 export default function ProductDetails() {
@@ -37,8 +38,6 @@ export default function ProductDetails() {
     !a.name.toLowerCase().includes('size') &&
     !a.name.toLowerCase().includes('color')
   );
-  console.log(product.attributes);
-  console.log(otherAttributes);
 
   const gallery = product.gallery || [];
   const mainImage = gallery[activeGalleryIdx]?.image_url || gallery[0]?.image_url;
@@ -57,7 +56,32 @@ export default function ProductDetails() {
   };
 
   function handleAddToCart() {
-    alert('Added to cart!');
+    // build attributes selection: size, color, other attributes
+    const selected = [];
+
+    // size
+    if (sizes && sizes.length) {
+      const sizeItem = sizes.find(s => s.value === selectedSize) || sizes[0];
+      if (sizeItem) selected.push({ attributeId: sizes[0].attribute_set_id || null, attributeName: 'Size', itemId: sizeItem.id, value: sizeItem.value, displayValue: sizeItem.displayValue || sizeItem.value });
+    }
+
+    // color
+    if (colors && colors.length) {
+      const colorItem = colors.find(c => c.value === selectedColor) || colors[0];
+      if (colorItem) selected.push({ attributeId: colors[0].attribute_set_id || null, attributeName: 'Color', itemId: colorItem.id, value: colorItem.value, displayValue: colorItem.displayValue || colorItem.value });
+    }
+
+    // other attributes
+    otherAttributes.forEach(attr => {
+      const items = attr.items || [];
+      const selVal = selectedAttributes[attr.name];
+      const item = items.find(it => it.value === selVal) || items[0];
+      if (item) {
+        selected.push({ attributeId: attr.id, attributeName: attr.name, itemId: item.id, value: item.value, displayValue: item.displayValue || item.value });
+      }
+    });
+
+    addToCart(product, selected, 1);
   }
 
   return (
