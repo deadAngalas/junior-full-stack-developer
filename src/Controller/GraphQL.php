@@ -5,6 +5,7 @@ namespace App\Controller;
 use GraphQL\GraphQL as GraphQLBase;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
+use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Schema;
 use GraphQL\Type\SchemaConfig;
 use GraphQL\Error\DebugFlag;
@@ -220,7 +221,27 @@ class GraphQL {
                     ]
                 ]
             ]);
-        
+            
+            $orderItemInputType = new InputObjectType([
+                'name' => 'OrderItemInput',
+                'fields' => [
+                    'product_id' => Type::nonNull(Type::string()),
+                    'product_name' => Type::string(),
+                    'price' => Type::float(),
+                    'quantity' => Type::int(),
+                    'attributes' => Type::string(), // передаем JSON
+                ],
+            ]);
+
+            $orderType = new ObjectType([
+                'name' => 'Order',
+                'fields' => [
+                    'id' => Type::nonNull(Type::int()),
+                    'total' => Type::nonNull(Type::float()),
+                    'created_at' => Type::string(),
+                ]
+            ]);
+
             $mutationType = new ObjectType([
                 'name' => 'Mutation',
                 'fields' => [
@@ -232,7 +253,63 @@ class GraphQL {
                         ],
                         'resolve' => static fn ($calc, array $args): int => $args['x'] + $args['y'],
                     ],
+
+                    'placeOrder' => [
+                    'type' => $orderType, // тип возвращаемого значения (Order)
+                    'args' => [
+                        'items' => Type::nonNull(Type::listOf(Type::nonNull($orderItemInputType))),
+                    ],
+                    'resolve' => function($root, $args) use ($conn) {
+                        $items = $args['items'];
+
+                        // 1) Рассчитываем total
+                        $total = 0;
+                        foreach ($items as $item) {
+                            $price = $item['price'] ?? 0;
+                            $qty = $item['quantity'] ?? 1;
+                            $total += $price * $qty;
+                        }
+
+                        // 2) Создаем заказ
+                        $stmt = $conn->prepare("INSERT INTO orders (total) VALUES (?)");
+                        $stmt->bind_param("d", $total);
+                        $stmt->execute();
+                        $orderId = $stmt->insert_id;
+                        $stmt->close();
+
+                        // 3) Добавляем товары в order_items
+                        $stmt = $conn->prepare("
+                            INSERT INTO order_items 
+                            (order_id, product_id, product_name, price, quantity, attributes) 
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ");
+                        foreach ($items as $item) {
+                            $attributes = isset($item['attributes']) ? json_encode($item['attributes']) : null;
+                            $stmt->bind_param(
+                                "issdis", 
+                                $orderId, 
+                                $item['product_id'], 
+                                $item['product_name'], 
+                                $item['price'], 
+                                $item['quantity'], 
+                                $attributes
+                            );
+                            $stmt->execute();
+                        }
+                        $stmt->close();
+
+                        // 4) Возвращаем данные созданного заказа
+                        $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ?");
+                        $stmt->bind_param("i", $orderId);
+                        $stmt->execute();
+                        $result = $stmt->get_result()->fetch_assoc();
+                        $stmt->close();
+
+                        return $result;
+                    }
+                ]
                 ],
+                
             ]);
         
             // See docs on schema options:
@@ -254,7 +331,6 @@ class GraphQL {
         
             $rootValue = ['prefix' => 'You said: '];
             $result = GraphQLBase::executeQuery($schema, $query, $rootValue, null, $variableValues);
-            // $output = $result->toArray();
             $output = $result->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE);
         } catch (Throwable $e) {
             $output = [

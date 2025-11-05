@@ -27,6 +27,7 @@ export default function MainContent({ activeCategory, products }) {
             key={p.id}
             className={`product-card ${!p.in_stock ? "out-of-stock" : ""}`}
             onClick={() => handleProductClick(p.id)}
+            data-testid={`product-${(p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
           >
             <div className="product-gallery">
               {p.gallery?.length > 0 && (
@@ -50,7 +51,6 @@ export default function MainContent({ activeCategory, products }) {
                 className="hover-icon"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // build default attributes: pick first item from each attribute set
                   const defaultAttributes = (p.attributes || []).map((aset) => {
                     const first = aset.items && aset.items.length ? aset.items[0] : null;
                     return first
@@ -71,6 +71,7 @@ export default function MainContent({ activeCategory, products }) {
                   });
 
                   addToCart(p, defaultAttributes, 1);
+                  window.dispatchEvent(new Event('cart.open'));
                 }}
               ></div>
             )}

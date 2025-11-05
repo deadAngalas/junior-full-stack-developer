@@ -15,8 +15,6 @@ export default function ProductDetails() {
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedAttributes, setSelectedAttributes] = useState({});
 
-
-
   useEffect(() => {
     async function loadProduct() {
       setLoading(true);
@@ -44,6 +42,20 @@ export default function ProductDetails() {
   const priceObj = product.prices?.[0];
   const priceDisplay = priceObj ? `${priceObj.currency?.symbol || ''}${priceObj.amount?.toFixed(2)}` : '-';
   const inStock = !!product.in_stock;
+  const requiredAttributes = [];
+
+  if (sizes.length > 0) requiredAttributes.push('size');
+  if (colors.length > 0) requiredAttributes.push('color');
+  if (otherAttributes.length > 0)
+    requiredAttributes.push(...otherAttributes.map(a => a.name));
+
+  const allSelected = requiredAttributes.every(attr => {
+    if (attr === 'size') return !!selectedSize;
+    if (attr === 'color') return !!selectedColor;
+    return !!selectedAttributes[attr];
+  });
+
+  const canAddToCart = inStock && allSelected;
 
   const handleSlide = dir => {
     if (!gallery.length) return;
@@ -82,11 +94,12 @@ export default function ProductDetails() {
     });
 
     addToCart(product, selected, 1);
+    window.dispatchEvent(new Event('cart.open'));
   }
 
   return (
     <div className="product-details-three-col">
-        <div className="gallery-thumbs">
+        <div className="gallery-thumbs" data-testid="product-gallery">
           {gallery.slice(0, 5).map((img, idx) => (
             <img
               key={idx}
@@ -115,7 +128,7 @@ export default function ProductDetails() {
       <div className="product-info-panel">
         <h1 className="product-title">{product.name}</h1>
         {isClothes && sizes.length > 0 && (
-          <div className="product-sizes">
+          <div className="product-sizes" data-testid={`product-attribute-size`}>
             <div className="attr-title">SIZE:</div>
             <div className="sizes-row">
               {sizes.map((s) => (
@@ -131,7 +144,7 @@ export default function ProductDetails() {
           </div>
         )}
         {colors.length > 0 && (
-          <div className="product-colors">
+          <div className="product-colors" data-testid={`product-attribute-color`}>
             <div className="attr-title">COLOR:</div>
             <div className="colors-row">
             {colors.map((c, index) => (
@@ -148,7 +161,7 @@ export default function ProductDetails() {
         {!isClothes && otherAttributes.length > 0 && (
           <>
             {otherAttributes.map(attr => (
-              <div key={attr.id} className="product-attr-block">
+              <div key={attr.id} className="product-attr-block" data-testid={`product-attribute-${(attr.name || '').toLowerCase().replace(/\s+/g, '-')}`}>
                 <div className="attr-title">{attr.name}:</div>
                 <div className="attr-items-row">
                   {attr.items?.map(item => {
@@ -177,10 +190,10 @@ export default function ProductDetails() {
           <div className="attr-title">PRICE:</div>
           <div className="product-price-details">{priceDisplay}</div>
         </div>
-        <button className="add-to-cart" disabled={!inStock} onClick={handleAddToCart}>
+        <button className="add-to-cart" disabled={!canAddToCart} onClick={handleAddToCart} data-testid="add-to-cart">
           {inStock ? 'ADD TO CART' : 'OUT OF STOCK'}
         </button>
-        <div className="product-desc">
+        <div className="product-desc" data-testid="product-description">
           {product.description 
             ? parse(product.description)
             : <em>No description.</em>

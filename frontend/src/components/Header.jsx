@@ -5,7 +5,8 @@ import logo from "../assets/logo.svg";
 import cartIcon from "../assets/cart-icon.svg";
 import { fetchCategories } from "../api/categoryService";
 import { fetchProducts } from "../api/productService";
-import { getCart, getCartCount, getCartTotal, removeCartItem, setCartItemQuantity, updateCartItemQuantity, updateCartItemAttributes } from '../utils/cart';
+import { PLACE_ORDER_MUTATION } from "../api/placeOrder";
+import { getCart, getCartCount, getCartTotal, removeCartItem, setCartItemQuantity, updateCartItemQuantity, updateCartItemAttributes, clearCart } from '../utils/cart';
 
 export default function Header() {
   const [categories, setCategories] = useState([]);
@@ -22,6 +23,36 @@ export default function Header() {
     ? location.pathname.split('/product/')[1]
     : null;
 
+  async function placeOrder() {
+  const items = cartItems.map(item => ({
+    product_id: item.productId,
+    product_name: item.name,
+    price: item.price,
+    quantity: item.quantity,
+    attributes: item.attributes || {}
+  }));
+
+  const response = await fetch('/api/graphql.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query: PLACE_ORDER_MUTATION,
+      variables: { items: cartItems.map(item => ({
+        product_id: item.productId,
+        product_name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        attributes: JSON.stringify(item.attributes || {})
+      })) }
+    })
+  });
+
+  const result = await response.json();
+
+  if (result.data && result.data.placeOrder) {
+    clearCart();
+  }
+}
 
   useEffect(() => {
     async function loadCategories() {
@@ -37,7 +68,15 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    // initialize cart state
+  function onCartOpenRequest() {
+    setCartOpen(true);
+  }
+  window.addEventListener('cart.open', onCartOpenRequest);
+  return () => window.removeEventListener('cart.open', onCartOpenRequest);
+}, []);
+
+
+  useEffect(() => {
     setCartItems(getCart());
     setCartCount(getCartCount());
     setCartTotal(getCartTotal());
@@ -100,6 +139,8 @@ export default function Header() {
     return location.pathname === `/category/${category.id}`;
   };
 
+  const itemLabel = cartCount === 1 ? `${cartCount} item` : `${cartCount} items`;
+
   return (
     <>
       <header className="header">
@@ -120,6 +161,7 @@ export default function Header() {
                   key={c.id}
                   className={`category ${isCategoryActive(c) ? "active" : ""}`}
                   onClick={() => handleCategoryClick(c)}
+                  data-testid={isCategoryActive(c) ? "active-category-link" : "category-link"}
                 >
                   {c.name}
                 </div>
@@ -127,7 +169,7 @@ export default function Header() {
             </div>
           </div>
 
-          <div className="header__logo">
+          <div className="header-logo">
             <Link to="/" className="logo-box">
               <img src={logo} alt="Logo" className="logo-icon" />
             </Link>
@@ -136,6 +178,11 @@ export default function Header() {
           <div className="nav-right">
             <div className="cart-icon" onClick={() => setCartOpen(!cartOpen)}>
               <img src={cartIcon} alt="Cart" className="cart-icon" />
+              {cartCount > 0 && (
+                <span className="cart-badge" aria-label={`${cartCount} items in cart`}>
+                  {cartCount}
+                </span>
+              )}
             </div>
           </div>
         </nav>
@@ -148,41 +195,44 @@ export default function Header() {
           <div className="cart-content">
             <h2 className="cart-title">
               <span className="cart-title-main">My Bag,</span>
-              <span className="cart-title-count">{cartCount} items</span>
+              <span className="cart-title-count">{itemLabel}</span>
             </h2>
 
             <div className="cart-items">
               {cartItems.length === 0 && <div className="loading">Cart is empty</div>}
               {cartItems.map((item, idx) => (
-                <div className="cart-item" key={`${item.productId}-${idx}`}>
+                <div className="cart-item" key={`${item.productId}-${idx}`} data-testid='cart-item'>
                   <div className="cart-item-info">
                     <div className="cart-item-name">{item.name}</div>
                     <div className="cart-item-price">{(item.price || 0).toFixed ? `$${item.price.toFixed(2)}` : `$${item.price}`}</div>
 
-                    {/* Render attribute option blocks using stored attributeSets or fallback to attributes */}
                     {(item.attributeSets || []).map((attrSet) => {
-                      const setId = attrSet.id || attrSet.attribute_set_id || attrSet.attributeId || attrSet.attribute_id || attrSet.name;
-                      // find current selected item for this set from item.attributes
+                      const kebabName = (attrSet.name || '').toLowerCase().replace(/\s+/g, '-');
                       const current = (item.attributes || []).find(a => String(a.attributeId) === String(attrSet.id) || String(a.attributeId) === String(attrSet.attribute_set_id) || String(a.attributeName) === String(attrSet.name));
                       return (
-                        <div className="attr-block" key={attrSet.id || attrSet.name}>
+                        <div className="attr-block" key={attrSet.id || attrSet.name} data-testid={`cart-item-attribute-${kebabName}`}>
                           <div className="attr-title">{attrSet.name}:</div>
                           <div className="attr-items-row">
                             {(attrSet.items || []).map(it => {
+                              const kebabValue = (it.displayValue || it.value || '').toLowerCase().replace(/\s+/g, '-');
                               const isColor = (attrSet.name || '').toLowerCase().includes('color') || (attrSet.name || '').toLowerCase().includes('цвет');
                               const isActive = current && (String(current.itemId) === String(it.id) || String(current.value) === String(it.value));
-                              // render display-only controls (no onClick)
+                              const baseTestId = `cart-item-attribute-${kebabName}-${kebabValue}`;
+                              const testId = isActive ? `${baseTestId}-selected` : baseTestId;
+                              
                               return isColor ? (
                                 <div
                                   key={it.id}
                                   className={`color-option ${isActive ? 'active' : ''}`}
                                   style={{ background: it.value || it.displayValue }}
+                                  data-testid={testId}
                                   aria-hidden={true}
                                 />
                               ) : (
                                 <div
                                   key={it.id}
                                   className={`attr-item ${isActive ? ' active' : ''} size-option`}
+                                  data-testid={testId}
                                   aria-hidden={true}
                                 >
                                   {it.displayValue || it.value}
@@ -193,28 +243,33 @@ export default function Header() {
                         </div>
                       );
                     })}
-
                   </div>
 
                   <div className="cart-item-qty">
-                    <button className="qty-btn" onClick={(e) => { e.stopPropagation(); updateCartItemQuantity(idx, 1); setCartItems(getCart()); setCartCount(getCartCount()); setCartTotal(getCartTotal()); }}>+</button>
-                    <div className="qty-count">{item.quantity || 1}</div>
-                    <button className="qty-btn" onClick={(e) => { e.stopPropagation(); updateCartItemQuantity(idx, -1); setCartItems(getCart()); setCartCount(getCartCount()); setCartTotal(getCartTotal()); }}>-</button>
+                    <button 
+                      className="qty-btn" 
+                      data-testid='cart-item-amount-increase' 
+                      onClick={(e) => { e.stopPropagation(); updateCartItemQuantity(idx, 1); setCartItems(getCart()); setCartCount(getCartCount()); setCartTotal(getCartTotal()); }}>+</button>
+                    <div className="qty-count" data-testid='cart-item-amount'>{item.quantity || 1}</div>
+                    <button 
+                      className="qty-btn" 
+                      data-testid='cart-item-amount-decrease' 
+                      onClick={(e) => { e.stopPropagation(); updateCartItemQuantity(idx, -1); setCartItems(getCart()); setCartCount(getCartCount()); setCartTotal(getCartTotal()); }}>-</button>
                   </div>
 
                   <div className="cart-item-image">
-                    <img src={item.image || 'https://via.placeholder.com/100'} alt={item.name} />
+                    <img src={item.image} alt={item.name} />
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="cart-total">
+            <div className="cart-total" data-testid='cart-total'>
               <span>Total</span>
               <span>${cartTotal.toFixed ? cartTotal.toFixed(2) : cartTotal}</span>
             </div>
 
-            <button className="cart-button">PLACE ORDER</button>
+            <button className={`cart-button ${cartItems.length === 0 ? 'disabled' : ''}`}  onClick={placeOrder} disabled={cartItems.length === 0}>PLACE ORDER</button>
           </div>
         </div>
         </>
