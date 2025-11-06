@@ -22,24 +22,40 @@ function App() {
 
 function HomePage() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+
 
   useEffect(() => {
-    async function loadProducts() {
+    async function loadData() {
       try {
-        const productsData = await fetchProducts();
-        setProducts(productsData);
+        const [productsData, categoriesData] = await Promise.all([
+          fetchProducts(),
+          fetchCategories()
+        ]);
+
+        setCategories(categoriesData);
+
+        const productsWithCategory = productsData.map(p => {
+          const category = categoriesData.find(c => c.id === p.category_id);
+          return {
+            ...p,
+            categoryName: category?.name || 'All'
+          };
+        });
+
+        setProducts(productsWithCategory);
       } catch (err) {
-        console.error("Error loading products:", err);
+        console.error("Error loading products or categories:", err);
         setProducts([]);
       }
     }
 
-    loadProducts();
+    loadData();
   }, []);
 
   return (
-    <MainContent 
-      activeCategory={{ name: "All" }} 
+    <MainContent
+      activeCategory={{ name: "All" }}
       products={products}
     />
   );
@@ -53,32 +69,45 @@ function CategoryPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const categories = await fetchCategories();
-         const currentCategory = categories.find(
+        const [categories, productsData] = await Promise.all([
+          fetchCategories(),
+          fetchProducts()
+        ]);
+
+        console.log("Fetched categories:", categories);
+        console.log("Fetched products:", productsData);
+
+        const currentCategory = categories.find(
           (c) => c.name.toLowerCase() === categoryName?.toLowerCase()
         );
-        
-        if (currentCategory) {
-          setActiveCategory(currentCategory);
-        }
 
-        const productsData = await fetchProducts(currentCategory.id);
-        setProducts(productsData);
+        console.log("Current category:", currentCategory);
+
+        if (currentCategory) setActiveCategory(currentCategory);
+
+        const productsWithCategory = productsData
+          .map(p => {
+            const cat = categories.find(c => c.id === p.category_id);
+            return { ...p, categoryName: cat?.name || 'All' };
+          })
+          .filter(p => p.category_id === currentCategory?.id);
+
+        console.log("Products for this category:", productsWithCategory);
+
+        setProducts(productsWithCategory);
       } catch (err) {
         console.error("Error loading data:", err);
         setProducts([]);
       }
     }
 
-    if (categoryName) {
-      loadData();
-    }
+    if (categoryName) loadData();
   }, [categoryName]);
 
   return (
     <MainContent 
       activeCategory={activeCategory} 
-      products={products}
+      products={products} 
     />
   );
 }

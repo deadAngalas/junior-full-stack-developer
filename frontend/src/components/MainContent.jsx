@@ -6,8 +6,12 @@ import { addToCart } from '../utils/cart';
 export default function MainContent({ activeCategory, products }) {
   const navigate = useNavigate();
 
-  const handleProductClick = (productId) => {
-    navigate(`/${activeCategory.name}/${productId}`);
+  const handleProductClick = (product) => {
+  const categoryPart = product.categoryName.toLowerCase() !== 'all'
+    ? `/${product.categoryName.toLowerCase()}`
+    : '';
+
+  navigate(`${categoryPart}/${product.id}`);
   };
 
   const formatCategoryName = (name) => {
@@ -26,7 +30,7 @@ export default function MainContent({ activeCategory, products }) {
           <div
             key={p.id}
             className={`product-card ${!p.in_stock ? "out-of-stock" : ""}`}
-            onClick={() => handleProductClick(p.id)}
+            onClick={() => handleProductClick(p)}
             data-testid={`product-${(p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
           >
             <div className="product-gallery">
