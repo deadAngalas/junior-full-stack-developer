@@ -13,8 +13,8 @@ function App() {
       <Header />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/category/:categoryId" element={<CategoryPage />} />
-        <Route path="/product/:productId" element={<ProductDetails />} />
+        <Route path="/:categoryName" element={<CategoryPage />} />
+        <Route path="/:categoryName/:productId" element={<ProductDetails />} />
       </Routes>
     </Router>
   );
@@ -46,23 +46,23 @@ function HomePage() {
 }
 
 function CategoryPage() {
-  const { categoryId } = useParams();
+  const { categoryName } = useParams();
   const [activeCategory, setActiveCategory] = useState(null);
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
     async function loadData() {
       try {
-        // Загружаем категории чтобы найти название текущей категории
         const categories = await fetchCategories();
-        const currentCategory = categories.find(c => c.id === parseInt(categoryId));
+         const currentCategory = categories.find(
+          (c) => c.name.toLowerCase() === categoryName?.toLowerCase()
+        );
         
         if (currentCategory) {
           setActiveCategory(currentCategory);
         }
 
-        // Загружаем продукты для категории
-        const productsData = await fetchProducts(parseInt(categoryId));
+        const productsData = await fetchProducts(currentCategory.id);
         setProducts(productsData);
       } catch (err) {
         console.error("Error loading data:", err);
@@ -70,10 +70,10 @@ function CategoryPage() {
       }
     }
 
-    if (categoryId) {
+    if (categoryName) {
       loadData();
     }
-  }, [categoryId]);
+  }, [categoryName]);
 
   return (
     <MainContent 

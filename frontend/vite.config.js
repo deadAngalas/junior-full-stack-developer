@@ -12,10 +12,6 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://scandishop.com',
-        changeOrigin: true,
-      },
       '/graphql': {
         target: 'http://scandishop.com',
         changeOrigin: true,

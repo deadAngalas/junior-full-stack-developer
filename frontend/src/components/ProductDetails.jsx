@@ -5,6 +5,30 @@ import parse from 'html-react-parser';
 import { addToCart } from '../utils/cart';
 import './ProductDetails.css';
 
+const parseAttributes = (product) => {
+  const result = {
+    isClothes: product.category_id === 2,
+    sizes: [],
+    colors: [],
+    otherAttributes: []
+  };
+
+  for (const attr of product.attributes || []) {
+    const name = (attr.name || '').toLowerCase();
+
+    if (name.includes('size')) {
+      result.sizes = attr.items || [];
+      result.isClothes = true; // если есть size — одежда
+    } else if (name.includes('color')) {
+      result.colors = attr.items || [];
+    } else {
+      result.otherAttributes.push(attr);
+    }
+  }
+
+  return result;
+};
+
 export default function ProductDetails() {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -29,14 +53,7 @@ export default function ProductDetails() {
   if (loading) return <div className="loading">Loading...</div>;
   if (!product) return <div className="error">Product not found</div>;
 
-  const isClothes = product.category_id === 2 || (product.attributes || []).some(a => a.name.toLowerCase().includes('size') || a.name.toLowerCase().includes('размер'));
-  const sizes = product.attributes?.find(a => a.name.toLowerCase().includes('size') || a.name.toLowerCase().includes('размер'))?.items || [];
-  const colors = product.attributes?.find(a => a.name.toLowerCase().includes('color') || a.name.toLowerCase().includes('цвет'))?.items || [];
-  const otherAttributes = (product.attributes || []).filter(a =>
-    !a.name.toLowerCase().includes('size') &&
-    !a.name.toLowerCase().includes('color')
-  );
-
+  const { isClothes, sizes, colors, otherAttributes } = parseAttributes(product);
   const gallery = product.gallery || [];
   const mainImage = gallery[activeGalleryIdx]?.image_url || gallery[0]?.image_url;
   const priceObj = product.prices?.[0];

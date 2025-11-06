@@ -1,19 +1,11 @@
+import { FETCH_GALLERIES_QUERY } from "./queries";
+
 export async function fetchProductGallery() {
   try {
-    const res = await fetch("/api/graphql.php", {
+    const res = await fetch("/graphql", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: `
-          query {
-            productGallery {
-              id
-              product_id
-              image_url
-            }
-          }
-        `,
-      }),
+      body: JSON.stringify({ query: FETCH_GALLERIES_QUERY }),
     });
     const data = await res.json();
     return data.data?.productGallery || [];

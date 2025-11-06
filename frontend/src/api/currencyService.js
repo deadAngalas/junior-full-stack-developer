@@ -1,19 +1,12 @@
+import { FETCH_CURRENCIES_QUERY } from "./queries";
+
 export async function fetchCurrencies() {
-  const query = `
-    query {
-      currencies {
-        id
-        label
-        symbol
-      }
-    }
-  `;
 
   try {
-    const res = await fetch("/api/graphql.php", {
+    const res = await fetch("/graphql", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query: FETCH_CURRENCIES_QUERY }),
     });
 
     const result = await res.json();

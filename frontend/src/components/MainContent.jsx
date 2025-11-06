@@ -7,7 +7,7 @@ export default function MainContent({ activeCategory, products }) {
   const navigate = useNavigate();
 
   const handleProductClick = (productId) => {
-    navigate(`/product/${productId}`);
+    navigate(`/${activeCategory.name}/${productId}`);
   };
 
   const formatCategoryName = (name) => {

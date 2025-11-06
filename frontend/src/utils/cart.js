@@ -47,17 +47,14 @@ function normalizeProductForCart(product) {
     name: product.name,
     price,
     image,
-    // keep attribute sets so cart can render full option lists and allow changes
     attributeSets: product.attributes || [],
   };
 }
 
-// attributes: array of { attributeId, attributeName, itemId, value, displayValue }
 export function addToCart(product, attributes = [], quantity = 1) {
   const cart = readCart();
   const base = normalizeProductForCart(product);
 
-  // create a key to match identical product + attributes
   const attrKey = (attributes || [])
     .map(a => `${a.attributeId}:${a.itemId}`)
     .sort()
@@ -80,28 +77,6 @@ export function addToCart(product, attributes = [], quantity = 1) {
   return cart;
 }
 
-export function removeCartItem(index) {
-  const cart = readCart();
-  if (index >= 0 && index < cart.length) {
-    cart.splice(index, 1);
-    writeCart(cart);
-  }
-  return cart;
-}
-
-export function setCartItemQuantity(index, quantity) {
-  const cart = readCart();
-  if (index >= 0 && index < cart.length) {
-    if (quantity <= 0) {
-      cart.splice(index, 1);
-    } else {
-      cart[index].quantity = quantity;
-    }
-    writeCart(cart);
-  }
-  return cart;
-}
-
 export function updateCartItemQuantity(index, delta) {
   const cart = readCart();
   if (index >= 0 && index < cart.length) {
@@ -117,25 +92,9 @@ export function updateCartItemQuantity(index, delta) {
   return cart;
 }
 
-// Replace the attributes array for a cart item and update attrKey accordingly
-export function updateCartItemAttributes(index, newAttributes) {
-  const cart = readCart();
-  if (index >= 0 && index < cart.length) {
-    cart[index].attributes = newAttributes;
-    const attrKey = (newAttributes || [])
-      .map(a => `${a.attributeId}:${a.itemId}`)
-      .sort()
-      .join('|');
-    cart[index].attrKey = attrKey;
-    writeCart(cart);
-  }
-  return cart;
-}
-
 export default {
   getCart,
   addToCart,
-  removeCartItem,
   clearCart,
   getCartCount,
   getCartTotal,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import './Header.css';
 import logo from "../assets/logo.svg";
@@ -6,7 +6,7 @@ import cartIcon from "../assets/cart-icon.svg";
 import { fetchCategories } from "../api/categoryService";
 import { fetchProducts } from "../api/productService";
 import { PLACE_ORDER_MUTATION } from "../api/placeOrder";
-import { getCart, getCartCount, getCartTotal, removeCartItem, setCartItemQuantity, updateCartItemQuantity, updateCartItemAttributes, clearCart } from '../utils/cart';
+import { getCart, getCartCount, getCartTotal, updateCartItemQuantity, clearCart } from '../utils/cart';
 
 export default function Header() {
   const [categories, setCategories] = useState([]);
@@ -16,43 +16,17 @@ export default function Header() {
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
+
   const navigate = useNavigate();
   const location = useLocation();
 
-  const productId = location.pathname.startsWith('/product/')
-    ? location.pathname.split('/product/')[1]
-    : null;
-
-  async function placeOrder() {
-  const items = cartItems.map(item => ({
-    product_id: item.productId,
-    product_name: item.name,
-    price: item.price,
-    quantity: item.quantity,
-    attributes: item.attributes || {}
-  }));
-
-  const response = await fetch('/api/graphql.php', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      query: PLACE_ORDER_MUTATION,
-      variables: { items: cartItems.map(item => ({
-        product_id: item.productId,
-        product_name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        attributes: JSON.stringify(item.attributes || {})
-      })) }
-    })
-  });
-
-  const result = await response.json();
-
-  if (result.data && result.data.placeOrder) {
-    clearCart();
-  }
-}
+  const { productId } = useMemo(() => {
+    const pathParts = location.pathname.split("/").filter(Boolean);
+    return {
+      categoryName: pathParts[0] || null,
+      productId: pathParts[1] || null,
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     async function loadCategories() {
@@ -68,12 +42,12 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-  function onCartOpenRequest() {
-    setCartOpen(true);
-  }
-  window.addEventListener('cart.open', onCartOpenRequest);
-  return () => window.removeEventListener('cart.open', onCartOpenRequest);
-}, []);
+    function onCartOpenRequest() {
+      setCartOpen(true);
+    }
+    window.addEventListener('cart.open', onCartOpenRequest);
+    return () => window.removeEventListener('cart.open', onCartOpenRequest);
+  }, []);
 
 
   useEffect(() => {
@@ -96,48 +70,82 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    async function loadProductCategory() {
-      if (location.pathname.startsWith('/product/') && productId) {
+    async function detectCategoryByProduct() {
+      if (productId) {
         try {
           const products = await fetchProducts();
-          const product = products.find(p => p.id === productId);
-          if (product && product.category_id) {
-            setProductCategoryId(product.category_id);
-          }
+          const product = products.find(
+            (p) => String(p.id) === String(productId)
+          );
+          setProductCategoryId(product ? product.category_id : null);
         } catch (err) {
-          console.error("Error loading product category:", err);
+          console.error("Error detecting category:", err);
+          setProductCategoryId(null);
         }
       } else {
         setProductCategoryId(null);
       }
     }
 
-    loadProductCategory();
-  }, [location.pathname, productId]);
+    detectCategoryByProduct();
+  }, [productId]);
 
   const handleCategoryClick = (category) => {
     if (category.name.toLowerCase() === 'all') {
       navigate('/');
     } else {
-      navigate(`/category/${category.id}`);
+      navigate(`/${category.name.toLowerCase()}`);
     }
 
-    if (window.innerWidth > 900) {
-      setMenuOpen(false);
-    }
+    if (window.innerWidth > 900) setMenuOpen(false);
   };
 
   const isCategoryActive = (category) => {
-    if (location.pathname.startsWith('/product/') && productCategoryId !== null) {
-      const isActive = parseInt(category.id) === parseInt(productCategoryId);
-      return isActive;
+    const pathname = location.pathname.toLowerCase();
+
+    if (productId && productCategoryId) {
+      return String(category.id) === String(productCategoryId);
     }
 
     if (category.name.toLowerCase() === 'all') {
-      return location.pathname === '/';
+      return pathname === '/';
     }
-    return location.pathname === `/category/${category.id}`;
+
+    return pathname.startsWith(`/${category.name.toLowerCase()}`);
   };
+
+    async function placeOrder() {
+    const items = cartItems.map(item => ({
+      product_id: item.productId,
+      product_name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      attributes: item.attributes || {}
+    }));
+
+    const response = await fetch("/graphql", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: PLACE_ORDER_MUTATION,
+        variables: {
+          items: cartItems.map(item => ({
+            product_id: item.productId,
+            product_name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            attributes: JSON.stringify(item.attributes || {})
+          }))
+        }
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.data && result.data.placeOrder) {
+      clearCart();
+    }
+  }
 
   const itemLabel = cartCount === 1 ? `${cartCount} item` : `${cartCount} items`;
 
@@ -190,88 +198,88 @@ export default function Header() {
 
       {cartOpen && (
         <>
-        <div className="overlay" onClick={() => setCartOpen(false)}></div>
-        <div className="cart-dropdown">
-          <div className="cart-content">
-            <h2 className="cart-title">
-              <span className="cart-title-main">My Bag,</span>
-              <span className="cart-title-count">{itemLabel}</span>
-            </h2>
+          <div className="overlay" onClick={() => setCartOpen(false)}></div>
+          <div className="cart-dropdown">
+            <div className="cart-content">
+              <h2 className="cart-title">
+                <span className="cart-title-main">My Bag,</span>
+                <span className="cart-title-count">{itemLabel}</span>
+              </h2>
 
-            <div className="cart-items">
-              {cartItems.length === 0 && <div className="loading">Cart is empty</div>}
-              {cartItems.map((item, idx) => (
-                <div className="cart-item" key={`${item.productId}-${idx}`} data-testid='cart-item'>
-                  <div className="cart-item-info">
-                    <div className="cart-item-name">{item.name}</div>
-                    <div className="cart-item-price">{(item.price || 0).toFixed ? `$${item.price.toFixed(2)}` : `$${item.price}`}</div>
+              <div className="cart-items">
+                {cartItems.length === 0 && <div className="loading">Cart is empty</div>}
+                {cartItems.map((item, idx) => (
+                  <div className="cart-item" key={`${item.productId}-${idx}`} data-testid='cart-item'>
+                    <div className="cart-item-info">
+                      <div className="cart-item-name">{item.name}</div>
+                      <div className="cart-item-price">{(item.price || 0).toFixed ? `$${item.price.toFixed(2)}` : `$${item.price}`}</div>
 
-                    {(item.attributeSets || []).map((attrSet) => {
-                      const kebabName = (attrSet.name || '').toLowerCase().replace(/\s+/g, '-');
-                      const current = (item.attributes || []).find(a => String(a.attributeId) === String(attrSet.id) || String(a.attributeId) === String(attrSet.attribute_set_id) || String(a.attributeName) === String(attrSet.name));
-                      return (
-                        <div className="attr-block" key={attrSet.id || attrSet.name} data-testid={`cart-item-attribute-${kebabName}`}>
-                          <div className="attr-title">{attrSet.name}:</div>
-                          <div className="attr-items-row">
-                            {(attrSet.items || []).map(it => {
-                              const kebabValue = (it.displayValue || it.value || '').toLowerCase().replace(/\s+/g, '-');
-                              const isColor = (attrSet.name || '').toLowerCase().includes('color') || (attrSet.name || '').toLowerCase().includes('цвет');
-                              const isActive = current && (String(current.itemId) === String(it.id) || String(current.value) === String(it.value));
-                              const baseTestId = `cart-item-attribute-${kebabName}-${kebabValue}`;
-                              const testId = isActive ? `${baseTestId}-selected` : baseTestId;
-                              
-                              return isColor ? (
-                                <div
-                                  key={it.id}
-                                  className={`color-option ${isActive ? 'active' : ''}`}
-                                  style={{ background: it.value || it.displayValue }}
-                                  data-testid={testId}
-                                  aria-hidden={true}
-                                />
-                              ) : (
-                                <div
-                                  key={it.id}
-                                  className={`attr-item ${isActive ? ' active' : ''} size-option`}
-                                  data-testid={testId}
-                                  aria-hidden={true}
-                                >
-                                  {it.displayValue || it.value}
-                                </div>
-                              );
-                            })}
+                      {(item.attributeSets || []).map((attrSet) => {
+                        const kebabName = (attrSet.name || '').toLowerCase().replace(/\s+/g, '-');
+                        const current = (item.attributes || []).find(a => String(a.attributeId) === String(attrSet.id) || String(a.attributeId) === String(attrSet.attribute_set_id) || String(a.attributeName) === String(attrSet.name));
+                        return (
+                          <div className="attr-block" key={attrSet.id || attrSet.name} data-testid={`cart-item-attribute-${kebabName}`}>
+                            <div className="attr-title">{attrSet.name}:</div>
+                            <div className="attr-items-row">
+                              {(attrSet.items || []).map(it => {
+                                const kebabValue = (it.displayValue || it.value || '').toLowerCase().replace(/\s+/g, '-');
+                                const isColor = (attrSet.name || '').toLowerCase().includes('color');
+                                const isActive = current && (String(current.itemId) === String(it.id) || String(current.value) === String(it.value));
+                                const baseTestId = `cart-item-attribute-${kebabName}-${kebabValue}`;
+                                const testId = isActive ? `${baseTestId}-selected` : baseTestId;
+
+                                return isColor ? (
+                                  <div
+                                    key={it.id}
+                                    className={`color-option ${isActive ? 'active' : ''}`}
+                                    style={{ background: it.value || it.displayValue }}
+                                    data-testid={testId}
+                                    aria-hidden={true}
+                                  />
+                                ) : (
+                                  <div
+                                    key={it.id}
+                                    className={`attr-item ${isActive ? ' active' : ''} size-option`}
+                                    data-testid={testId}
+                                    aria-hidden={true}
+                                  >
+                                    {it.displayValue || it.value}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
 
-                  <div className="cart-item-qty">
-                    <button 
-                      className="qty-btn" 
-                      data-testid='cart-item-amount-increase' 
-                      onClick={(e) => { e.stopPropagation(); updateCartItemQuantity(idx, 1); setCartItems(getCart()); setCartCount(getCartCount()); setCartTotal(getCartTotal()); }}>+</button>
-                    <div className="qty-count" data-testid='cart-item-amount'>{item.quantity || 1}</div>
-                    <button 
-                      className="qty-btn" 
-                      data-testid='cart-item-amount-decrease' 
-                      onClick={(e) => { e.stopPropagation(); updateCartItemQuantity(idx, -1); setCartItems(getCart()); setCartCount(getCartCount()); setCartTotal(getCartTotal()); }}>-</button>
-                  </div>
+                    <div className="cart-item-qty">
+                      <button
+                        className="qty-btn"
+                        data-testid='cart-item-amount-increase'
+                        onClick={(e) => { e.stopPropagation(); updateCartItemQuantity(idx, 1); setCartItems(getCart()); setCartCount(getCartCount()); setCartTotal(getCartTotal()); }}>+</button>
+                      <div className="qty-count" data-testid='cart-item-amount'>{item.quantity || 1}</div>
+                      <button
+                        className="qty-btn"
+                        data-testid='cart-item-amount-decrease'
+                        onClick={(e) => { e.stopPropagation(); updateCartItemQuantity(idx, -1); setCartItems(getCart()); setCartCount(getCartCount()); setCartTotal(getCartTotal()); }}>-</button>
+                    </div>
 
-                  <div className="cart-item-image">
-                    <img src={item.image} alt={item.name} />
+                    <div className="cart-item-image">
+                      <img src={item.image} alt={item.name} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              <div className="cart-total" data-testid='cart-total'>
+                <span>Total</span>
+                <span>${cartTotal.toFixed ? cartTotal.toFixed(2) : cartTotal}</span>
+              </div>
+
+              <button className={`cart-button ${cartItems.length === 0 ? 'disabled' : ''}`} onClick={placeOrder} disabled={cartItems.length === 0}>PLACE ORDER</button>
             </div>
-
-            <div className="cart-total" data-testid='cart-total'>
-              <span>Total</span>
-              <span>${cartTotal.toFixed ? cartTotal.toFixed(2) : cartTotal}</span>
-            </div>
-
-            <button className={`cart-button ${cartItems.length === 0 ? 'disabled' : ''}`}  onClick={placeOrder} disabled={cartItems.length === 0}>PLACE ORDER</button>
           </div>
-        </div>
         </>
       )}
     </>

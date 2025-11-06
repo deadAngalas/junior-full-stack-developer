@@ -1,46 +1,13 @@
-const GRAPHQL_URL = "/api/graphql.php";
+import { FETCH_PRODUCTS_QUERY } from "./queries";
 
 export async function fetchProducts(categoryId = null) {
-  const query = `
-    query ($categoryId: Int) {
-      products(categoryId: $categoryId) {
-        id
-        name
-        description
-        in_stock
-        brand
-        category_id
-        gallery {
-          id
-          image_url
-        }
-        prices {
-          amount
-          currency {
-            symbol
-          }
-        }
-        attributes {
-          id
-          name
-          type
-          items {
-            id
-            displayValue
-            value
-          }
-        }
-      }
-    }
-  `;
-
   const variables = categoryId ? { categoryId } : {};
 
   try {
-    const res = await fetch(GRAPHQL_URL, {
+    const res = await fetch("/graphql", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, variables }),
+      body: JSON.stringify({ query: FETCH_PRODUCTS_QUERY, variables }),
     });
 
     const json = await res.json();

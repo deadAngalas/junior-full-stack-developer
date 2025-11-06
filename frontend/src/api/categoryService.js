@@ -1,18 +1,11 @@
-export async function fetchCategories() {
-  const query = `
-    query {
-      categories {
-        id
-        name
-      }
-    }
-  `;
+import { FETCH_CATEGORIES_QUERY } from "./queries";
 
+export async function fetchCategories() {
   try {
-    const res = await fetch("/api/graphql.php", {
+    const res = await fetch("/graphql", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query: FETCH_CATEGORIES_QUERY }),
     });
 
     const result = await res.json();

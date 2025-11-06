@@ -1,20 +1,12 @@
+import { FETCH_PRICES_QUERY } from "./queries";
+
 export async function fetchPrices() {
-  const query = `
-    query {
-      prices {
-        id
-        product_id
-        currency_id
-        amount
-      }
-    }
-  `;
 
   try {
-    const res = await fetch("/api/graphql.php", {
+    const res = await fetch("/graphql", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query: FETCH_PRICES_QUERY }),
     });
 
     const result = await res.json();
