@@ -1,6 +1,12 @@
 import { FETCH_CATEGORIES_QUERY } from "./queries";
 
+let cachedCategories = null;
+
 export async function fetchCategories() {
+  if (cachedCategories) {
+    return cachedCategories;
+  }
+
   try {
     const res = await fetch("/graphql", {
       method: "POST",
@@ -14,8 +20,9 @@ export async function fetchCategories() {
       console.error("GraphQL errors:", result.errors);
       return [];
     }
-
-    return result.data.categories;
+    
+    cachedCategories = result.data.categories;
+    return cachedCategories;
   } catch (err) {
     console.error("Error fetching categories:", err);
     return [];

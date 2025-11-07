@@ -1,4 +1,4 @@
-/* ====== GENERAL STYLES ====== */
+/* === GENERAL STYLES === */
 .product-details-three-col {
   max-width: 1440px;
   margin-top: 80px;
@@ -22,7 +22,29 @@
   overflow-y: auto;
   overflow-x: hidden;
   flex-shrink: 0;
+  padding-right: 12px;
+
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent; 
 }
+
+.gallery-thumbs::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .gallery-thumbs::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .gallery-thumbs::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+    border: 2px solid transparent;
+  }
+  
+  .gallery-thumbs::-webkit-scrollbar-thumb:hover {
+    background-color: #5ECE7B;
+  }
 
 .gallery-thumb {
   width: 79px;
@@ -97,7 +119,7 @@
   line-height: 27px;
 }
 
-/* ====== ATTR ====== */
+/* === ATTR === */
 .attr-title {
   font-family: 'Roboto', sans-serif;
   font-size: 18px;
@@ -138,7 +160,6 @@
   transition: all 0.15s ease;
   box-sizing: border-box;
   padding: 0;
-  /* reset global button padding so width/height are exact */
 }
 
 .attr-item:hover,
@@ -154,7 +175,7 @@
   color: #fff;
 }
 
-/* ====== COLOR BUTTONS ====== */
+/* === COLOR BUTTONS === */
 .colors-row {
   display: flex;
   gap: 12px;
@@ -174,7 +195,7 @@
   outline-offset: 2px;
 }
 
-/* ====== PRICE AND ADD BUTTON ====== */
+/* === PRICE AND ADD BUTTON === */
 .product-price-details {
   font-size: 24px;
   font-weight: 700;
@@ -208,7 +229,7 @@
   opacity: 1;
 }
 
-/* ====== OTHERS ====== */
+/* === OTHERS === */
 .product-desc {
   font-size: 16px;
   color: #232323;
@@ -228,7 +249,7 @@
 }
 
 
-/* ===== MOBILE ===== */
+/* === MOBILE === */
 @media (max-width: 1368px) {
   .product-details-three-col {
     flex-direction: column;
@@ -240,15 +261,16 @@
   .gallery-thumbs {
     flex-direction: row;
     overflow-x: auto;
-    justify-content: center;
-    width: auto;
-    max-width: 100%;
-    width: 100%;
     gap: 10px;
-    padding: 0 20px 8px 0;
-    padding-bottom: 8px;
-    margin: 0 auto;
+
+    width: 100%;
+    max-width: 100%;
+    justify-content: flex-start;
     box-sizing: border-box;
+
+    padding: 0 20px;
+    scroll-padding-left: 20px;
+    scroll-padding-right: 20px;
   }
 
   .gallery-thumbs::-webkit-scrollbar {

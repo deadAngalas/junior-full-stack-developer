@@ -3,13 +3,11 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import './Header.css';
 import logo from "../assets/logo.svg";
 import cartIcon from "../assets/cart-icon.svg";
-import { fetchCategories } from "../api/categoryService";
 import { fetchProducts } from "../api/productService";
 import { PLACE_ORDER_MUTATION } from "../api/placeOrder";
 import { getCart, getCartCount, getCartTotal, updateCartItemQuantity, clearCart } from '../utils/cart';
 
-export default function Header() {
-  const [categories, setCategories] = useState([]);
+export default function Header({ categories }) {
   const [productCategoryId, setProductCategoryId] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -27,19 +25,6 @@ export default function Header() {
       productId: pathParts[1] || null,
     };
   }, [location.pathname]);
-
-  useEffect(() => {
-    async function loadCategories() {
-      try {
-        const data = await fetchCategories();
-        setCategories(data);
-      } catch (err) {
-        console.error("Error loading categories", err);
-      }
-    }
-
-    loadCategories();
-  }, []);
 
   useEffect(() => {
     function onCartOpenRequest() {

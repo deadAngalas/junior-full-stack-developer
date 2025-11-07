@@ -6,7 +6,8 @@ use App\Database\Connection;
 use App\Models\AttributeSet;
 use App\Models\ProductGallery;
 
-class Product {
+abstract class Product
+{
     public $id;
     public $name;
     public $description;
@@ -16,7 +17,18 @@ class Product {
     public $attributes = [];
     public $gallery = [];
 
-    public function __construct($id = null, $name = null, $description = null, $in_stock = null, $category_id = null, $brand = null) {
+    public const CATEGORY_ALL = 1;
+
+    protected static array $typeMap = [];
+
+    public function __construct(
+        $id = null,
+        $name = null,
+        $description = null,
+        $in_stock = null,
+        $category_id = null,
+        $brand = null
+    ) {
         $this->id = $id;
         $this->name = $name;
         $this->description = $description;
@@ -25,19 +37,41 @@ class Product {
         $this->brand = $brand;
     }
 
-    public const CATEGORY_ALL = 1;
-    
-    public static function getAllProducts(int $category = 1): array {
+    public static function registerType(int $categoryId, string $className): void
+    {
+        self::$typeMap[$categoryId] = $className;
+    }
+
+    public static function createFromRow(array $row): Product
+    {
+        $categoryId = (int)$row['category_id'];
+
+        if (!isset(self::$typeMap[$categoryId])) {
+            throw new \Exception("No product type registered for category {$categoryId}");
+        }
+
+        $class = self::$typeMap[$categoryId];
+
+        return new $class(
+            $row['id'],
+            $row['name'],
+            $row['description'],
+            (bool)$row['in_stock'],
+            (int)$row['category_id'],
+            $row['brand']
+        );
+    }
+
+    public static function getAllProducts(int $category = self::CATEGORY_ALL): array
+    {
         $db = (new Connection())->connect();
 
         $sql = "SELECT id, name, description, in_stock, category_id, brand FROM products";
-
         if ($category !== self::CATEGORY_ALL) {
             $sql .= " WHERE category_id = ?";
         }
 
         $stmt = $db->prepare($sql);
-
         if ($category !== self::CATEGORY_ALL) {
             $stmt->bind_param("i", $category);
         }
@@ -47,28 +81,20 @@ class Product {
 
         $products = [];
         while ($row = $result->fetch_assoc()) {
-            $prod = new self(
-                $row['id'], 
-                $row['name'], 
-                $row['description'], 
-                (bool)$row['in_stock'], 
-                (int)$row['category_id'], 
-                $row['brand']
-            );
-
+            $prod = self::createFromRow($row);
             $prod->loadAttributes();
             $prod->gallery = ProductGallery::getByProductId($prod->id);
-
             $products[] = $prod;
         }
 
         $stmt->close();
         $db->close();
+
         return $products;
     }
 
-    public function loadAttributes() {
-       try {
+    public function loadAttributes()
+    {
         $db = (new Connection())->connect();
         $stmt = $db->prepare("
             SELECT aset.id AS set_id, aset.name AS set_name, aset.type AS set_type
@@ -88,10 +114,7 @@ class Product {
 
         $stmt->close();
         $db->close();
-    } catch (\Throwable $e) {
-            error_log("loadAttributes error for product {$this->id}: " . $e->getMessage());
-            throw $e;
-        }
     }
+
+    abstract public function getFormattedAttributes(): array;
 }
-?>

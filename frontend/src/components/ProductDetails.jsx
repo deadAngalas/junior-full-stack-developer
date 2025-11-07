@@ -6,32 +6,35 @@ import { addToCart } from '../utils/cart';
 import './ProductDetails.css';
 
 const parseAttributes = (product) => {
-  const result = {
-    isClothes: product.category_id === 2,
-    sizes: [],
-    colors: [],
-    otherAttributes: []
-  };
+    const result = {
+        isClothes: product.category_id === 2,
+        sizes: [],
+        colors: [],
+        otherAttributes: []
+    };
 
-  for (const attr of product.attributes || []) {
-    const name = (attr.name || '').toLowerCase();
+    const mapping = {
+        size: 'sizes',
+        color: 'colors',
+    };
 
-    if (name.includes('size')) {
-      result.sizes = attr.items || [];
-      result.isClothes = true; // если есть size — одежда
-    } else if (name.includes('color')) {
-      result.colors = attr.items || [];
-    } else {
-      result.otherAttributes.push(attr);
+    for (const attr of product.attributes || []) {
+        const name = (attr.name || '').toLowerCase();
+        const key = Object.keys(mapping).find(k => name.includes(k));
+
+        key 
+        ? (() => {
+            result[mapping[key]] = attr.items || [];
+            if (key === 'size') result.isClothes = true;
+            })()
+        : result.otherAttributes.push(attr);
     }
-  }
 
   return result;
 };
 
 export default function ProductDetails() {
   const { productId } = useParams();
-  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
@@ -117,7 +120,7 @@ export default function ProductDetails() {
   return (
     <div className="product-details-three-col">
         <div className="gallery-thumbs" data-testid="product-gallery">
-          {gallery.slice(0, 5).map((img, idx) => (
+            {gallery.map((img, idx) => (
             <img
               key={idx}
               src={img?.image_url || ''}

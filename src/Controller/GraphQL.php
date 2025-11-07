@@ -15,11 +15,16 @@ use Throwable;
 
 use App\Database\Connection;
 use App\Models\Product;
+use App\Models\ClothesProduct;
+use App\Models\TechProduct;
 use App\Models\AttributeSet;
 
 class GraphQL {
     static public function handle() {
         try {
+            Product::registerType(ClothesProduct::CATEGORY_ID, ClothesProduct::class);
+            Product::registerType(TechProduct::CATEGORY_ID, TechProduct::class);
+            
             $db = new Connection();
             $conn = $db->connect();
 
@@ -98,6 +103,23 @@ class GraphQL {
                 ],
             ]);
 
+            $formattedAttributeItemType = new ObjectType([
+                'name' => 'FormattedAttributeItem',
+                'fields' => [
+                    'id' => Type::int(),
+                    'value' => Type::string(),
+                    'displayValue' => Type::string(),
+                ],
+            ]);
+
+            $formattedAttributeSetType = new ObjectType([
+                'name' => 'FormattedAttributeSet',
+                'fields' => [
+                    'name' => Type::string(),
+                    'items' => Type::listOf($formattedAttributeItemType),
+                ],
+            ]);
+
             $productType = new ObjectType([
                 'name' => 'Product',
                 'fields' => [
@@ -107,6 +129,8 @@ class GraphQL {
                     'in_stock' => Type::boolean(),
                     'brand' => Type::string(),
                     'category_id' => Type::int(),
+                    'productKind' => Type::string(),
+                    'formattedAttributes' => Type::listOf($formattedAttributeSetType),
                     'attributes' => [
                         'type' => Type::listOf($attributeSetType),
                         'resolve' => function($product) use ($conn) {
@@ -206,6 +230,14 @@ class GraphQL {
 
                             $result = [];
                             foreach ($allProducts as $p) {
+                                $formatted = [];
+                                foreach ($p->getFormattedAttributes() as $setName => $items) {
+                                    $formatted[] = [
+                                        'name' => $setName,
+                                        'items' => $items,
+                                    ];
+                                }
+                                $kind = ($p instanceof \App\Models\ClothesProduct) ? 'clothes' : (($p instanceof \App\Models\TechProduct) ? 'tech' : 'product');
                                 $result[] = [
                                     'id' => $p->id,
                                     'name' => $p->name,
@@ -213,6 +245,8 @@ class GraphQL {
                                     'in_stock' => $p->in_stock,
                                     'brand' => $p->brand,
                                     'category_id' => $p->category_id,
+                                    'productKind' => $kind,
+                                    'formattedAttributes' => $formatted,
                                     'gallery' => $p->gallery
                                 ];
                             }
@@ -229,7 +263,7 @@ class GraphQL {
                     'product_name' => Type::string(),
                     'price' => Type::float(),
                     'quantity' => Type::int(),
-                    'attributes' => Type::string(), // передаем JSON
+                    'attributes' => Type::string(),
                 ],
             ]);
 
@@ -255,14 +289,13 @@ class GraphQL {
                     ],
 
                     'placeOrder' => [
-                    'type' => $orderType, // тип возвращаемого значения (Order)
+                    'type' => $orderType,
                     'args' => [
                         'items' => Type::nonNull(Type::listOf(Type::nonNull($orderItemInputType))),
                     ],
                     'resolve' => function($root, $args) use ($conn) {
                         $items = $args['items'];
 
-                        // 1) Рассчитываем total
                         $total = 0;
                         foreach ($items as $item) {
                             $price = $item['price'] ?? 0;
@@ -270,14 +303,12 @@ class GraphQL {
                             $total += $price * $qty;
                         }
 
-                        // 2) Создаем заказ
                         $stmt = $conn->prepare("INSERT INTO orders (total) VALUES (?)");
                         $stmt->bind_param("d", $total);
                         $stmt->execute();
                         $orderId = $stmt->insert_id;
                         $stmt->close();
 
-                        // 3) Добавляем товары в order_items
                         $stmt = $conn->prepare("
                             INSERT INTO order_items 
                             (order_id, product_id, product_name, price, quantity, attributes) 
@@ -298,7 +329,6 @@ class GraphQL {
                         }
                         $stmt->close();
 
-                        // 4) Возвращаем данные созданного заказа
                         $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ?");
                         $stmt->bind_param("i", $orderId);
                         $stmt->execute();

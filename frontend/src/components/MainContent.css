@@ -55,15 +55,15 @@
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.3s ease, transform 0.3s ease;
-  pointer-events: none; /* disabled until visible */
+  pointer-events: none;
 }
 
 .product-card:hover .hover-icon {
   opacity: 1;
   transform: translateY(0);
-  pointer-events: auto; /* enable clicks when visible */
+  pointer-events: auto;
   cursor: pointer;
-  z-index: 10; /* ensure icon is above other children */
+  z-index: 10;
 }
 
 .product-gallery {
@@ -131,7 +131,7 @@
 }
 
 
-/* 2 columns */
+/* === 2 COLUMNS === */
 @media (max-width: 1299px) {
   .products-list {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
@@ -158,7 +158,7 @@
   }
 }
 
-/* 1 col */
+/* 1 COL */
 @media (max-width: 899px) {
   .products-list {
     grid-template-columns: repeat(1, 1fr);
