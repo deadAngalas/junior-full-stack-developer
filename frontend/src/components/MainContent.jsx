@@ -7,11 +7,11 @@ export default function MainContent({ activeCategory, products }) {
   const navigate = useNavigate();
 
   const handleProductClick = (product) => {
-  const categoryPart = product.categoryName.toLowerCase() !== 'all'
-    ? `/${product.categoryName.toLowerCase()}`
-    : '';
+    const categoryPart = product.categoryName.toLowerCase() !== 'all'
+      ? `/${product.categoryName.toLowerCase()}`
+      : '';
 
-  navigate(`${categoryPart}/${product.id}`);
+    navigate(`${categoryPart}/${product.id}`);
   };
 
   const formatCategoryName = (name) => {
@@ -55,25 +55,16 @@ export default function MainContent({ activeCategory, products }) {
                 className="hover-icon"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const defaultAttributes = (p.attributes || []).map((aset) => {
-                    const first = aset.items && aset.items.length ? aset.items[0] : null;
-                    return first
-                      ? {
-                          attributeId: aset.id,
-                          attributeName: aset.name,
-                          itemId: first.id,
-                          value: first.value,
-                          displayValue: first.displayValue || first.value,
-                        }
-                      : {
-                          attributeId: aset.id,
-                          attributeName: aset.name,
-                          itemId: null,
-                          value: null,
-                          displayValue: null,
-                        };
+                  const defaultAttributes = (p.attributes ?? []).map(({ id, name, items }) => {
+                    const { id: itemId = null, value = null, displayValue = null } = (items?.[0] ?? {});
+                    return {
+                      attributeId: id,
+                      attributeName: name,
+                      itemId,
+                      value,
+                      displayValue: displayValue ?? value,
+                    };
                   });
-
                   addToCart(p, defaultAttributes, 1);
                   window.dispatchEvent(new Event('cart.open'));
                 }}

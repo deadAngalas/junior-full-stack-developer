@@ -213,8 +213,9 @@
 
 .cart-title {
   font-size: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   color: #1D1F22;
+  text-align: left;
 }
 
 .cart-title-main { font-weight: 700; }

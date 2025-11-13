@@ -144,6 +144,10 @@
 /* === BUTTONS FOR ATTR AND SIZES === */
 .attr-item,
 .size-button {
+  font-family: Source Sans Pro;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 18px;
   width: 63px;
   height: 45px;
   background: #fff;
@@ -154,9 +158,6 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-weight: 400;
-  font-size: 16px;
-  line-height: 18px;
   transition: all 0.15s ease;
   box-sizing: border-box;
   padding: 0;

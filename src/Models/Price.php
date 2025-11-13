@@ -2,49 +2,39 @@
 
 namespace App\Models;
 
-use App\Database\Connection;
+class Price
+{
+    private int $id;
+    private string $product_id;
+    private float $amount;
+    private int $currency_id;
 
-class Price {
-    public $id;
-    public $product_id;
-    public $amount;
-    public $currency_id;
-
-    public function __construct($id = null, $product_id = null, $amount = null, $currency_id = null) {
+    public function __construct(int $id, string $product_id, float $amount, int $currency_id)
+    {
         $this->id = $id;
         $this->product_id = $product_id;
         $this->amount = $amount;
         $this->currency_id = $currency_id;
     }
 
-    public static function getAll(): array {
-            $db = (new Connection())->connect();
-            $result = $db->query("SELECT id, product_id, amount, currency_id FROM prices");
+    public function getId(): int
+    {
+        return $this->id;
+    }
+    public function getProductId(): string
+    {
+        return $this->product_id;
+    }
+    public function getAmount(): float
+    {
+        return $this->amount;
+    }
+    public function getCurrencyId(): int
+    {
+        return $this->currency_id;
+    }
 
-            $currencies = [];
-            while ($row = $result->fetch_assoc()) {
-                $currencies[] = new self($row['id'], $row['product_id'], $row['amount'], $row['currency_id']);
-            }
-           
-            $db->close();
-            return $currencies;
-        }
-
-    public static function getByProductId(string $productId): array {
-        $db = (new Connection())->connect();
-        $stmt = $db->prepare("SELECT id, product_id, amount, currency_id FROM prices WHERE product_id = ?");
-        $stmt->bind_param("s", $productId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        $prices = [];
-        while ($row = $result->fetch_assoc()) {
-            $prices[] = new self($row['id'], $row['product_id'], $row['amount'], $row['currency_id']);
-        }
-
-        $stmt->close();
-        $db->close();
-        return $prices;
+    public function getCurrency(): ?Currency {
+        return Currency::getById($this->currency_id ?? null);
     }
 }
-?>

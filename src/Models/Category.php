@@ -5,25 +5,13 @@ namespace App\Models;
 use App\Database\Connection;
 
 class Category {
-    public $id;
-    public $name;
-
-    public function __construct($id = null, $name = null) {
-        $this->id = $id;
-        $this->name = $name;
-    }
-
-    public static function getAll(): array {
-        $db = (new Connection())->connect();
-        $result = $db->query("SELECT id, name FROM categories");
-        $categories = [];
-
-        while ($row = $result->fetch_assoc()) {
-            $categories[] = new self($row['id'], $row['name']);
-        }
-
-        $db->close();
-        return $categories;
+    private int $id;
+    private string $name;
+    public static function getAll(): array
+    {
+        $db = new Connection();
+        $conn = $db->connect();
+        $res = $conn->query("SELECT id, name FROM categories");
+        return $res->fetch_all(MYSQLI_ASSOC); // each row will be represented as an associative array with keys
     }
 }
-?>

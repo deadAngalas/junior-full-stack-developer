@@ -3,30 +3,48 @@ namespace App\Models;
 
 use App\Database\Connection;
 
-class ProductGallery {
-    public $id;
-    public $product_id;
-    public $image_url;
+class ProductGallery
+{
+    private int $id;
+    private string $product_id;
+    private string $image_url;
 
-    public static function getByProductId(string $productId): array {
+    public function __construct(int $id, string $product_id, string $image_url)
+    {
+        $this->id = $id;
+        $this->product_id = $product_id;
+        $this->image_url = $image_url;
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+    public function getProductId(): string
+    {
+        return $this->product_id;
+    }
+    public function getImageUrl(): string
+    {
+        return $this->image_url;
+    }
+
+    public static function getGalleryByProductId(string $productId): array
+    {
         $db = (new Connection())->connect();
         $stmt = $db->prepare("SELECT id, product_id, image_url FROM product_gallery WHERE product_id = ?");
         $stmt->bind_param("s", $productId);
         $stmt->execute();
         $result = $stmt->get_result();
 
-        $images = [];
+        $gallery = [];
         while ($row = $result->fetch_assoc()) {
-            $img = new self();
-            $img->id = $row['id'];
-            $img->product_id = $row['product_id'];
-            $img->image_url = $row['image_url'];
-            $images[] = $img;
+            $gallery[] = new self($row['id'], $row['product_id'], $row['image_url']);
         }
 
         $stmt->close();
         $db->close();
-        return $images;
+
+        return $gallery;
     }
 }
-?>

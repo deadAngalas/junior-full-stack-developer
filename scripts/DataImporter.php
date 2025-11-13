@@ -1,12 +1,16 @@
 <?php
 require_once __DIR__ . '/../src/Database/Connection.php';
 
-class DataImporter {
+use App\Database\Connection;
+
+class DataImporter
+{
     private $conn;
     private $data;
 
-    public function __construct($jsonFile) {
-        $db = new Database();
+    public function __construct($jsonFile)
+    {
+        $db = new Connection();
         $this->conn = $db->connect();
 
         $json = file_get_contents($jsonFile);
@@ -17,18 +21,21 @@ class DataImporter {
         }
     }
 
-    public function import() {
+    public function import()
+    {
         $this->importCategories();
         $this->importProducts();
     }
 
-    private function importCategories() {
+    private function importCategories()
+    {
         foreach ($this->data['data']['categories'] as $cat) {
             $this->getOrCreateCategory($cat['name']);
         }
     }
 
-    private function importProducts() {
+    private function importProducts()
+    {
         $products = $this->data['data']['products'];
         foreach ($products as $p) {
             $categoryId = $this->getOrCreateCategory($p['category']);
@@ -77,7 +84,8 @@ class DataImporter {
         }
     }
 
-    private function getOrCreateCategory(string $name): int {
+    private function getOrCreateCategory(string $name): int
+    {
         $stmt = $this->conn->prepare("SELECT id FROM categories WHERE name = ?");
         $stmt->bind_param("s", $name);
         $stmt->execute();
@@ -97,7 +105,8 @@ class DataImporter {
         return $insertedId;
     }
 
-    private function getOrCreateCurrency(array $currency): int {
+    private function getOrCreateCurrency(array $currency): int
+    {
         $stmt = $this->conn->prepare("SELECT id FROM currencies WHERE label = ?");
         $stmt->bind_param("s", $currency['label']);
         $stmt->execute();
@@ -117,7 +126,8 @@ class DataImporter {
         return $insertedId;
     }
 
-    private function getOrCreateAttributeSet(string $name, string $type): int {
+    private function getOrCreateAttributeSet(string $name, string $type): int
+    {
         $stmt = $this->conn->prepare("SELECT id FROM attribute_sets WHERE name = ?");
         $stmt->bind_param("s", $name);
         $stmt->execute();
@@ -137,7 +147,8 @@ class DataImporter {
         return $insertedId;
     }
 
-    private function insertAttribute(int $setId, array $item) {
+    private function insertAttribute(int $setId, array $item)
+    {
         $stmt = $this->conn->prepare("INSERT INTO attributes (attribute_set_id, display_value, value) VALUES (?, ?, ?)");
         $stmt->bind_param("iss", $setId, $item['displayValue'], $item['value']);
         $stmt->execute();

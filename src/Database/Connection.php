@@ -19,4 +19,3 @@ class Connection
         return $conn;
     }
 }
-?>

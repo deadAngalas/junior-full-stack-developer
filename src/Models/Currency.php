@@ -3,27 +3,57 @@
 namespace App\Models;
 
 use App\Database\Connection;
+class Currency
+{
+    private int $id;
+    private string $label;
+    private string $symbol;
 
-class Currency {
-    public $id;
-    public $label;
-    public $symbol;
+    private static array $cache = [];
 
-    public static function getAll(): array {
-            $db = (new Connection())->connect();
-            $result = $db->query("SELECT id, label, symbol FROM currencies");
-            $currencies = [];
+    public function __construct(int $id, string $label, string $symbol)
+    {
+        $this->id = $id;
+        $this->label = $label;
+        $this->symbol = $symbol;
+    }
 
-            while ($row = $result->fetch_assoc()) {
-                $c = new self();
-                $c->id = $row['id'];
-                $c->label = $row['label'];
-                $c->symbol = $row['symbol'];
-                $currencies[] = $c;
-            }
+    public function getId(): int
+    {
+        return $this->id;
+    }
+    public function getLabel(): string
+    {
+        return $this->label;
+    }
+    public function getSymbol(): string
+    {
+        return $this->symbol;
+    }
 
-            $db->close();
-            return $currencies;
+    public static function getById(int $id): ?self
+    {
+        if ($id <= 0) return null;
+
+        if (isset(self::$cache[$id])) {
+            return self::$cache[$id];
         }
+
+        $db = (new Connection())->connect();
+        $stmt = $db->prepare("SELECT id, label, symbol FROM currencies WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $db->close();
+
+        if (!$row) {
+            self::$cache[$id] = null;
+            return null;
+        }
+
+        $c = new self((int)$row['id'], $row['label'], $row['symbol']);
+        self::$cache[$id] = $c;
+        return $c;
+    }
 }
-?>

@@ -4,13 +4,13 @@ import './Header.css';
 import logo from "../assets/logo.svg";
 import cartIcon from "../assets/cart-icon.svg";
 import { fetchProducts } from "../api/productService";
-import { PLACE_ORDER_MUTATION } from "../api/placeOrder";
+import { PLACE_ORDER_MUTATION } from "../utils/placeOrder";
 import { getCart, getCartCount, getCartTotal, updateCartItemQuantity, clearCart } from '../utils/cart';
 
 export default function Header({ categories }) {
-  const [productCategoryId, setProductCategoryId] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
+  const [productCategoryId, setProductCategoryId] = useState(null); // used to highlight the active category in the menu
+  const [menuOpen, setMenuOpen] = useState(false); // for a mobile burger menu
+  const [cartOpen, setCartOpen] = useState(false); // drop-down basket state
   const [cartItems, setCartItems] = useState([]);
   const [cartCount, setCartCount] = useState(0);
   const [cartTotal, setCartTotal] = useState(0);
@@ -18,63 +18,66 @@ export default function Header({ categories }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { productId } = useMemo(() => {
-    const pathParts = location.pathname.split("/").filter(Boolean);
+  const { productId } = useMemo(() => { // caches the result so as not to calculate it unnecessarily for each render
+    const pathParts = location.pathname.split("/").filter(Boolean); // delete empty elements
     return {
       categoryName: pathParts[0] || null,
       productId: pathParts[1] || null,
     };
   }, [location.pathname]);
 
+
+  // Cart Open Handler
   useEffect(() => {
-    function onCartOpenRequest() {
-      setCartOpen(true);
-    }
-    window.addEventListener('cart.open', onCartOpenRequest);
-    return () => window.removeEventListener('cart.open', onCartOpenRequest);
+    const handler = () => setCartOpen(true);
+    window.addEventListener('cart.open', handler);
+    return () => window.removeEventListener('cart.open', handler);
   }, []);
 
-
+  // Tracking cart updates
   useEffect(() => {
-    setCartItems(getCart());
-    setCartCount(getCartCount());
-    setCartTotal(getCartTotal());
-
-    function onCartUpdate(e) {
-      setCartItems((e && e.detail && e.detail.cart) || getCart());
+    const updateCartState = (e) => {
+      const cart = e?.detail?.cart || getCart();
+      setCartItems(cart);
       setCartCount(getCartCount());
       setCartTotal(getCartTotal());
-    }
+    };
 
-    window.addEventListener('cart.updated', onCartUpdate);
-    window.addEventListener('storage', onCartUpdate);
+    updateCartState();
+
+    window.addEventListener('cart.updated', updateCartState);
+    window.addEventListener('storage', updateCartState);
     return () => {
-      window.removeEventListener('cart.updated', onCartUpdate);
-      window.removeEventListener('storage', onCartUpdate);
+      window.removeEventListener('cart.updated', updateCartState);
+      window.removeEventListener('storage', updateCartState);
     };
   }, []);
 
   useEffect(() => {
-    async function detectCategoryByProduct() {
-      if (productId) {
-        try {
-          const products = await fetchProducts();
-          const product = products.find(
-            (p) => String(p.id) === String(productId)
-          );
-          setProductCategoryId(product ? product.category_id : null);
-        } catch (err) {
-          console.error("Error detecting category:", err);
-          setProductCategoryId(null);
-        }
-      } else {
-        setProductCategoryId(null);
-      }
+    if (!productId) {
+      setProductCategoryId(null);
+      return;
     }
 
-    detectCategoryByProduct();
+    let cancelled = false;
+
+    fetchProducts()
+      .then(products => {
+        if (!cancelled) {
+          const product = products.find(p => String(p.id) === String(productId));
+          setProductCategoryId(product?.category_id || null);
+        }
+      })
+      .catch(err => {
+        console.error("Error detecting category:", err);
+        if (!cancelled) setProductCategoryId(null);
+      });
+
+    return () => { cancelled = true; };
   }, [productId]);
 
+
+  // Category navigation
   const handleCategoryClick = (category) => {
     if (category.name.toLowerCase() === 'all') {
       navigate('/');
@@ -99,15 +102,7 @@ export default function Header({ categories }) {
     return pathname.startsWith(`/${category.name.toLowerCase()}`);
   };
 
-    async function placeOrder() {
-    const items = cartItems.map(item => ({
-      product_id: item.productId,
-      product_name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      attributes: item.attributes || {}
-    }));
-
+  async function placeOrder() {
     const response = await fetch("/graphql", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,7 +114,7 @@ export default function Header({ categories }) {
             product_name: item.name,
             price: item.price,
             quantity: item.quantity,
-            attributes: JSON.stringify(item.attributes || {})
+            attributes: JSON.stringify(item.attributes || [])
           }))
         }
       })
@@ -259,7 +254,7 @@ export default function Header({ categories }) {
 
               <div className="cart-total" data-testid='cart-total'>
                 <span>Total</span>
-                <span>${cartTotal.toFixed ? cartTotal.toFixed(2) : cartTotal}</span>
+                <span>${cartTotal}</span>
               </div>
 
               <button className={`cart-button ${cartItems.length === 0 ? 'disabled' : ''}`} onClick={placeOrder} disabled={cartItems.length === 0}>PLACE ORDER</button>

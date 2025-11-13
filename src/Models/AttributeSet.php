@@ -4,32 +4,44 @@ namespace App\Models;
 
 use App\Database\Connection;
 
-class AttributeSet {
-    public $id;
-    public $name;
-    public $type;
-    public array $attributes = [];
+class AttributeSet
+{
+    private int $id;
+    private string $name;
+    private string $type;
+    private array $attributes = [];
 
-    public function __construct($id = null, $name = null, $type = null) {
+    public function __construct(int $id, string $name, string $type)
+    {
         $this->id = $id;
         $this->name = $name;
         $this->type = $type;
     }
 
-    public static function getAll(): array {
-        $db = (new Connection())->connect();
-        $result = $db->query("SELECT id, name, type FROM attribute_sets");
-        $sets = [];
-
-        while ($row = $result->fetch_assoc()) {
-            $sets[] = new self($row['id'], $row['name'], $row['type']);
-        }
-
-        $db->close();
-        return $sets;
+    public function getId(): int
+    {
+        return $this->id;
+    }
+    public function getName(): string
+    {
+        return $this->name;
+    }
+    public function getType(): string
+    {
+        return $this->type;
+    }
+    public function getAttributes(): array
+    {
+        return $this->attributes;
     }
 
-    public function getAttributes(string $productId): array {
+    public function setAttributes(array $attributes): void
+    {
+        $this->attributes = $attributes;
+    }
+
+    public function loadAttributesByProductId(string $productId): void
+    {
         $db = (new Connection())->connect();
 
         $stmt = $db->prepare("
@@ -43,13 +55,11 @@ class AttributeSet {
         $stmt->execute();
 
         $result = $stmt->get_result();
-        $attributes = [];
-        $seen = [];
+        $attrs = [];
 
         while ($row = $result->fetch_assoc()) {
-            error_log(print_r($row, true));
-            $attributes[] = [
-                'id' => (int)$row['id'],
+            $attrs[] = [
+                'id' => (int) $row['id'],
                 'value' => $row['value'],
                 'displayValue' => $row['display_value'] ?? $row['value']
             ];
@@ -57,9 +67,7 @@ class AttributeSet {
 
         $stmt->close();
         $db->close();
-
-        return $attributes;
+        $this->setAttributes($attrs);
     }
 
 }
-?>

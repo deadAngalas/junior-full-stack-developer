@@ -8,26 +8,25 @@ use App\Models\ProductGallery;
 
 abstract class Product
 {
-    public $id;
-    public $name;
-    public $description;
-    public $in_stock;
-    public $category_id;
-    public $brand;
-    public $attributes = [];
-    public $gallery = [];
+    private string $id;
+    private string $name;
+    private string $description;
+    private bool $in_stock;
+    private int $category_id;
+    private ?string $brand;
+    protected array $attributes = [];
+    protected array $gallery = [];
 
     public const CATEGORY_ALL = 1;
-
     protected static array $typeMap = [];
 
     public function __construct(
-        $id = null,
-        $name = null,
-        $description = null,
-        $in_stock = null,
-        $category_id = null,
-        $brand = null
+        string $id,
+        string $name,
+        string $description,
+        bool $in_stock,
+        int $category_id,
+        string $brand
     ) {
         $this->id = $id;
         $this->name = $name;
@@ -37,6 +36,39 @@ abstract class Product
         $this->brand = $brand;
     }
 
+    public function getId(): string
+    {
+        return $this->id;
+    }
+    public function getName(): string
+    {
+        return $this->name;
+    }
+    public function getDescription(): string
+    {
+        return $this->description;
+    }
+    public function isInStock(): bool
+    {
+        return $this->in_stock;
+    }
+    public function getCategoryId(): int
+    {
+        return $this->category_id;
+    }
+    public function getBrand(): string
+    {
+        return $this->brand;
+    }
+    public function getAttributes(): array
+    {
+        return $this->attributes;
+    }
+    public function getGallery(): array
+    {
+        return $this->gallery;
+    }
+
     public static function registerType(int $categoryId, string $className): void
     {
         self::$typeMap[$categoryId] = $className;
@@ -44,7 +76,7 @@ abstract class Product
 
     public static function createFromRow(array $row): Product
     {
-        $categoryId = (int)$row['category_id'];
+        $categoryId = (int) $row['category_id'];
 
         if (!isset(self::$typeMap[$categoryId])) {
             throw new \Exception("No product type registered for category {$categoryId}");
@@ -56,8 +88,8 @@ abstract class Product
             $row['id'],
             $row['name'],
             $row['description'],
-            (bool)$row['in_stock'],
-            (int)$row['category_id'],
+            (bool) $row['in_stock'],
+            (int) $row['category_id'],
             $row['brand']
         );
     }
@@ -65,35 +97,38 @@ abstract class Product
     public static function getAllProducts(int $category = self::CATEGORY_ALL): array
     {
         $db = (new Connection())->connect();
-
+    
         $sql = "SELECT id, name, description, in_stock, category_id, brand FROM products";
         if ($category !== self::CATEGORY_ALL) {
             $sql .= " WHERE category_id = ?";
         }
-
+    
         $stmt = $db->prepare($sql);
         if ($category !== self::CATEGORY_ALL) {
             $stmt->bind_param("i", $category);
         }
-
+    
         $stmt->execute();
         $result = $stmt->get_result();
-
-        $products = [];
-        while ($row = $result->fetch_assoc()) {
+    
+        // Берём все строки сразу
+        $rows = $result->fetch_all(MYSQLI_ASSOC);
+    
+        $products = array_map(function($row) {
             $prod = self::createFromRow($row);
             $prod->loadAttributes();
-            $prod->gallery = ProductGallery::getByProductId($prod->id);
-            $products[] = $prod;
-        }
-
+            $prod->gallery = ProductGallery::getGalleryByProductId($prod->getId());
+            return $prod;
+        }, $rows);
+    
         $stmt->close();
         $db->close();
-
+    
         return $products;
     }
+    
 
-    public function loadAttributes()
+    public function loadAttributes(): void
     {
         $db = (new Connection())->connect();
         $stmt = $db->prepare("
@@ -102,13 +137,14 @@ abstract class Product
             JOIN attribute_sets aset ON pas.attribute_set_id = aset.id
             WHERE pas.product_id = ?
         ");
-        $stmt->bind_param("s", $this->id);
+        $id = $this->getId();
+        $stmt->bind_param("s", $id);
         $stmt->execute();
         $result = $stmt->get_result();
 
         while ($row = $result->fetch_assoc()) {
             $set = new AttributeSet($row['set_id'], $row['set_name'], $row['set_type']);
-            $set->attributes = $set->getAttributes($this->id);
+            $set->loadAttributesByProductId($this->id);
             $this->attributes[] = $set;
         }
 
