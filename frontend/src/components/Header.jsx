@@ -149,7 +149,7 @@ export default function Header({ categories }) {
                   key={c.id}
                   className={`category ${isCategoryActive(c) ? "active" : ""}`}
                   onClick={() => handleCategoryClick(c)}
-                  data-testid={isCategoryActive(c) ? "active-category-link" : "category-link"}
+                  data-testid={isCategoryActive(c) ? 'active-category-link' : 'category-link'}
                 >
                   {c.name}
                 </div>

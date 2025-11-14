@@ -79,7 +79,7 @@ export default function ProductDetails() {
   return (
     <div className="product-details-three-col">
       {/* Left column — thumbnails */}
-      <div className="gallery-thumbs" data-testid="product-gallery">
+      <div className="gallery-thumbs" data-testid='product-gallery'>
         {gallery.map((img, idx) => (
           <img
             key={idx}
@@ -170,13 +170,13 @@ export default function ProductDetails() {
           className="add-to-cart"
           disabled={!canAddToCart}
           onClick={handleAddToCart}
-          data-testid="add-to-cart"
+          data-testid='add-to-cart'
         >
           {inStock ? "ADD TO CART" : "OUT OF STOCK"}
         </button>
 
         {/* Description */}
-        <div className="product-desc" data-testid="product-description">
+        <div className="product-desc" data-testid='product-description'>
           {product.description ? (
             parse(product.description)
           ) : (
