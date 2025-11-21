@@ -4,7 +4,7 @@ namespace App\Models;
 
 class ClothesProduct extends Product
 {
-    public const int CATEGORY_ID = 2;
+    public const CATEGORY_ID = 2;
 
     public function getFormattedAttributes(): array
     {

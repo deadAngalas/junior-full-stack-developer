@@ -4,7 +4,7 @@ namespace App\Models;
 
 class TechProduct extends Product
 {
-    public const int CATEGORY_ID = 3;
+    public const CATEGORY_ID = 3;
 
     public function getFormattedAttributes(): array
     {

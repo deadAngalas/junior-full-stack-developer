@@ -111,7 +111,6 @@ abstract class Product
         $stmt->execute();
         $result = $stmt->get_result();
     
-        // Берём все строки сразу
         $rows = $result->fetch_all(MYSQLI_ASSOC);
     
         $products = array_map(function($row) {
@@ -126,7 +125,6 @@ abstract class Product
     
         return $products;
     }
-    
 
     public function loadAttributes(): void
     {
