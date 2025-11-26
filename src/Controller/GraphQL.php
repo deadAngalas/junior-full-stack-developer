@@ -16,12 +16,13 @@ use App\Database\Connection;
 use App\Models\Product;
 use App\Models\ClothesProduct;
 use App\Models\TechProduct;
-use App\Models\AttributeSet;
 use App\Models\Price;
-use App\Models\Category;
 
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+use App\Resolvers\ProductResolvers;
+use App\Resolvers\QueryResolvers;
+use App\Resolvers\MutationResolvers;
+
+
 
 class GraphQL
 {
@@ -157,80 +158,15 @@ class GraphQL
                     'formattedAttributes' => Type::listOf($formattedAttributeSetType),
                     'attributes' => [
                         'type' => Type::listOf($attributeSetType),
-                        'resolve' => function ($product) use ($conn) {
-                            $productId = is_array($product) ? ($product['id'] ?? null) : $product->getId();
-                            if ($productId === null)
-                                return [];
-
-                            $stmt = $conn->prepare("
-                                SELECT aset.id AS set_id, aset.name AS set_name, aset.type AS set_type
-                                FROM product_attribute_sets pas
-                                JOIN attribute_sets aset ON pas.attribute_set_id = aset.id
-                                WHERE pas.product_id = ?
-                                GROUP BY aset.id, aset.name, aset.type
-                            ");
-
-                            $stmt->bind_param("s", $productId);
-                            $stmt->execute();
-                            $res = $stmt->get_result();
-
-                            $attributeSets = [];
-                            while ($row = $res->fetch_assoc()) {
-                                $set = new AttributeSet((int) $row['set_id'], $row['set_name'], $row['set_type']);
-                                $set->loadAttributesByProductId($productId);
-
-                                $uniqueAttrs = [];
-                                $seenIds = [];
-                                foreach ($set->getAttributes() as $attr) {
-                                    $id = (int) $attr['id'];
-                                    if (!isset($seenIds[$id])) {
-                                        $seenIds[$id] = true;
-                                        $uniqueAttrs[] = $attr;
-                                    }
-                                }
-                                $set->setAttributes($uniqueAttrs);
-                                $attributeSets[] = $set;
-                            }
-                            $stmt->close();
-                            return $attributeSets;
-                        }
+                        'resolve' => fn($product) => ProductResolvers::resolveAttributes($product, $conn)
                     ],
                     'gallery' => [
                         'type' => Type::listOf($productGalleryType),
-                        'resolve' => function ($product) {
-                            $gallery = is_array($product) ? ($product['gallery'] ?? []) : $product->getGallery();
-                            return array_map(fn($g) => [
-                                'id' => $g->getId() ?? $g->id,
-                                'product_id' => $g->getProductId() ?? $g->product_id,
-                                'image_url' => $g->getImageUrl() ?? $g->image_url,
-                            ], $gallery);
-                        }
+                        'resolve' => fn($product) => ProductResolvers::resolveGallery($product)
                     ],
                     'prices' => [
                         'type' => Type::listOf($priceType),
-                        'resolve' => function ($product) use ($conn) {
-                            $productId = is_array($product) ? ($product['id'] ?? null) : $product->getId();
-                            if ($productId === null)
-                                return [];
-
-                            $stmt = $conn->prepare("SELECT id, product_id, amount, currency_id FROM prices WHERE product_id = ?");
-                            $stmt->bind_param("s", $product['id']);
-                            $stmt->execute();
-                            $result = $stmt->get_result();
-
-                            $prices = [];
-                            while ($row = $result->fetch_assoc()) {
-                                $prices[] = new Price(
-                                    (int) $row['id'],
-                                    $row['product_id'],
-                                    (float) $row['amount'],
-                                    (int) $row['currency_id'],
-
-                                );
-                            }
-                            $stmt->close();
-                            return $prices;
-                        }
+                        'resolve' => fn($product) => ProductResolvers::resolvePrices($product, $conn)
                     ],
                 ],
             ]);
@@ -240,33 +176,14 @@ class GraphQL
                 'fields' => [
                     'categories' => [
                         'type' => Type::listOf($categoryType),
-                        'resolve' => fn() => Category::getAll()
+                        'resolve' => fn() => QueryResolvers::resolveCategories()
                     ],
                     'products' => [
                         'type' => Type::listOf($productType),
                         'args' => [
                             'categoryId' => ['type' => Type::int()],
                         ],
-                        'resolve' => function ($rootValue, $args) use ($conn) {
-                            $categoryId = $args['categoryId'] ?? Product::CATEGORY_ALL;
-                            $allProducts = Product::getAllProducts($categoryId);
-
-                            return array_map(fn($p) => [
-                                'id' => $p->getId(),
-                                'name' => $p->getName(),
-                                'description' => $p->getDescription(),
-                                'in_stock' => $p->isInStock(),
-                                'brand' => $p->getBrand(),
-                                'category_id' => $p->getCategoryId(),
-                                'productKind' => $p instanceof ClothesProduct ? 'clothes' : ($p instanceof TechProduct ? 'tech' : 'product'),
-                                'formattedAttributes' => array_map(
-                                    fn($items, $setName) => ['name' => $setName, 'items' => $items],
-                                    $p->getFormattedAttributes(),
-                                    array_keys($p->getFormattedAttributes())
-                                ),
-                                'gallery' => $p->getGallery(),
-                            ], $allProducts);
-                        }
+                        'resolve' => fn($rootValue, $args) => QueryResolvers::resolveProducts($rootValue, $args, $conn)
                     ]
                 ]
             ]);
@@ -300,60 +217,16 @@ class GraphQL
                             'x' => ['type' => Type::int()],
                             'y' => ['type' => Type::int()],
                         ],
-                        'resolve' => static fn(array $args): int => $args['x'] + $args['y'],
+                        'resolve' => fn($rootValue, $args) => MutationResolvers::resolveSum($args),
                     ],
                     'placeOrder' => [
                         'type' => $orderType,
                         'args' => [
                             'items' => Type::nonNull(Type::listOf(Type::nonNull($orderItemInputType))),
                         ],
-                        'resolve' => function ($rootValue, $args) use ($conn) {
-                            $items = $args['items'];
-
-                            $total = 0;
-                            foreach ($items as $item) {
-                                $price = $item['price'] ?? 0;
-                                $qty = $item['quantity'] ?? 1;
-                                $total += $price * $qty;
-                            }
-
-                            $stmt = $conn->prepare("INSERT INTO orders (total) VALUES (?)");
-                            $stmt->bind_param("d", $total);
-                            $stmt->execute();
-                            $orderId = $stmt->insert_id;
-                            $stmt->close();
-
-                            $stmt = $conn->prepare("
-                            INSERT INTO order_items 
-                            (order_id, product_id, product_name, price, quantity, attributes) 
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        ");
-                            foreach ($items as $item) {
-                                $attributes = isset($item['attributes']) ? json_encode($item['attributes']) : null;
-                                $stmt->bind_param(
-                                    "issdis",
-                                    $orderId,
-                                    $item['product_id'],
-                                    $item['product_name'],
-                                    $item['price'],
-                                    $item['quantity'],
-                                    $attributes
-                                );
-                                $stmt->execute();
-                            }
-                            $stmt->close();
-
-                            $stmt = $conn->prepare("SELECT * FROM orders WHERE id = ?");
-                            $stmt->bind_param("i", $orderId);
-                            $stmt->execute();
-                            $result = $stmt->get_result()->fetch_assoc();
-                            $stmt->close();
-
-                            return $result;
-                        }
+                        'resolve' => fn($rootValue, $args) => MutationResolvers::resolvePlaceOrder($rootValue, $args, $conn)
                     ]
                 ],
-
             ]);
 
             // See docs on schema options:
