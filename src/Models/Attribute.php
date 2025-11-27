@@ -2,26 +2,41 @@
 
 namespace App\Models;
 
-class Attribute
+class Attribute extends AttributeSet
 {
-    private int $id;
+    private int $attributeId;
     private string $displayValue;
     private string $value;
 
-    public function __construct(int $id, string $product_id, string $image_url)
-    {
-        $this->id = $id;
-        $this->product_id = $product_id;
-        $this->image_url = $image_url;
+    public function __construct(
+        int $setId,
+        string $setName,
+        string $setType,
+        int $attributeId,
+        string $value,
+        string $displayValue = ''
+    ) {
+        parent::__construct($setId, $setName, $setType);
+        $this->attributeId = $attributeId;
+        $this->value = $value;
+        $this->displayValue = $displayValue !== '' ? $displayValue : $value;
     }
+
     public function getId(): int
     {
-        return $this->id;
+        return $this->attributeId;
     }
+
+    public function getSetId(): int
+    {
+        return parent::getId();
+    }
+
     public function getDisplayValue(): string
     {
         return $this->displayValue;
     }
+
     public function getValue(): string
     {
         return $this->value;

@@ -101,7 +101,7 @@ export default function CartOverlay({
                         </div>
                       </div>
                     );
-                  })}ун
+                  })}
                 </div>
 
                 <div className="cart-item-qty">

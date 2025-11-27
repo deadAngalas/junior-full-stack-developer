@@ -3,6 +3,7 @@
 namespace App\Resolvers;
 
 use App\Models\AttributeSet;
+use App\Models\Attribute;
 use App\Models\Price;
 use mysqli;
 
@@ -37,7 +38,8 @@ class ProductResolvers
             $seen = [];
 
             foreach ($set->getAttributes() as $attr) {
-                $id = (int)$attr['id'];
+                if (!($attr instanceof Attribute)) continue;
+                $id = (int)$attr->getId();
                 if (!isset($seen[$id])) {
                     $seen[$id] = true;
                     $unique[] = $attr;

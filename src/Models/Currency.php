@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Database\Connection;
-class Currency
+
+class Currency extends Price
 {
-    private int $id;
     private string $label;
     private string $symbol;
 
@@ -13,15 +13,11 @@ class Currency
 
     public function __construct(int $id, string $label, string $symbol)
     {
-        $this->id = $id;
+        parent::__construct($id, '', 0.0, $id);
         $this->label = $label;
         $this->symbol = $symbol;
     }
 
-    public function getId(): int
-    {
-        return $this->id;
-    }
     public function getLabel(): string
     {
         return $this->label;

@@ -17,12 +17,11 @@ use App\Models\Product;
 use App\Models\ClothesProduct;
 use App\Models\TechProduct;
 use App\Models\Price;
+use App\Models\Attribute;
 
 use App\Resolvers\ProductResolvers;
 use App\Resolvers\QueryResolvers;
 use App\Resolvers\MutationResolvers;
-
-
 
 class GraphQL
 {
@@ -39,9 +38,18 @@ class GraphQL
             $productAttributeType = new ObjectType([
                 'name' => 'Attribute',
                 'fields' => [
-                    'id' => Type::int(),
-                    'value' => Type::string(),
-                    'displayValue' => Type::string(),
+                    'id' => [
+                        'type' => Type::int(),
+                        'resolve' => fn($attr) => $attr instanceof Attribute ? $attr->getId() : ($attr['id'] ?? null)
+                    ],
+                    'value' => [
+                        'type' => Type::string(),
+                        'resolve' => fn($attr) => $attr instanceof Attribute ? $attr->getValue() : ($attr['value'] ?? null)
+                    ],
+                    'displayValue' => [
+                        'type' => Type::string(),
+                        'resolve' => fn($attr) => $attr instanceof Attribute ? $attr->getDisplayValue() : ($attr['displayValue'] ?? null)
+                    ],
                 ],
             ]);
 

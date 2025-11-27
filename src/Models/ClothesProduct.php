@@ -11,12 +11,12 @@ class ClothesProduct extends Product
         $formatted = [];
 
         $formatAttr = function ($attr) {
-            if (!is_object($attr))
+            if (!($attr instanceof Attribute))
                 return null;
-            $value = $attr->value ?? '';
-            $display = $attr->displayValue ?? $value;
+            $value = $attr->getValue() ?? '';
+            $display = $attr->getDisplayValue() ?? $value;
             return [
-                'id' => (int) ($attr->id ?? 0),
+                'id' => (int) ($attr->getId() ?? 0),
                 'value' => $value,
                 'displayValue' => $display,
             ];

@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Database\Connection;
+use App\Models\Attribute;
 
 class AttributeSet
 {
-    private int $id;
-    private string $name;
-    private string $type;
-    private array $attributes = [];
+    protected int $id;
+    protected string $name;
+    protected string $type;
+    protected array $attributes = [];
 
     public function __construct(int $id, string $name, string $type)
     {
@@ -58,11 +59,14 @@ class AttributeSet
         $attrs = [];
 
         while ($row = $result->fetch_assoc()) {
-            $attrs[] = [
-                'id' => (int) $row['id'],
-                'value' => $row['value'],
-                'displayValue' => $row['display_value'] ?? $row['value']
-            ];
+            $attrs[] = new Attribute(
+                $this->id,
+                $this->name,
+                $this->type,
+                (int)$row['id'],
+                $row['value'],
+                $row['display_value'] ?? $row['value']
+            );
         }
 
         $stmt->close();
