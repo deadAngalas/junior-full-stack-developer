@@ -4,6 +4,11 @@
   text-align: center;
 }
 
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;
