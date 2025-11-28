@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import './Header.css';
 import logo from "../assets/logo.svg";
@@ -21,6 +21,8 @@ export default function Header({ categories }) {
     increase,
     decrease
   } = useCart();
+  const burgerRef = useRef(null);
+  const categoriesRef = useRef(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,6 +59,26 @@ export default function Header({ categories }) {
     return () => { cancelled = true; };
   }, [productId]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const closeOnOutsideClick = (event) => {
+      if (window.innerWidth > 900) return; // ignore desktop clicks
+      const clickedBurger = burgerRef.current?.contains(event.target);
+      const clickedCategories = categoriesRef.current?.contains(event.target);
+      if (!clickedBurger && !clickedCategories) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('touchstart', closeOnOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      document.removeEventListener('touchstart', closeOnOutsideClick);
+    };
+  }, [menuOpen]);
+
 
   // Category navigation
   const handleCategoryClick = (category) => {
@@ -90,6 +112,7 @@ export default function Header({ categories }) {
           <div className="nav-left">
             <div
               className={`burger ${menuOpen ? 'open' : ''}`}
+              ref={burgerRef}
               onClick={() => {
                 setMenuOpen(!menuOpen);
                 if (!menuOpen) setCartOpen(false);
@@ -100,7 +123,10 @@ export default function Header({ categories }) {
               <span></span>
             </div>
 
-            <div className={`categories ${menuOpen ? 'open' : ''}`}>
+            <div
+              className={`categories ${menuOpen ? 'open' : ''}`}
+              ref={categoriesRef}
+            >
               {categories.map(c => (
                 <div
                   key={c.id}
