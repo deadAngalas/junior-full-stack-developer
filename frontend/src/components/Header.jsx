@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import './Header.css';
 import logo from "../assets/logo.svg";
 import cartIcon from "../assets/cart-icon.svg";
@@ -24,7 +24,6 @@ export default function Header({ categories }) {
   const burgerRef = useRef(null);
   const categoriesRef = useRef(null);
 
-  const navigate = useNavigate();
   const location = useLocation();
 
   const { productId } = useMemo(() => { // caches the result so as not to calculate it unnecessarily for each render
@@ -80,17 +79,6 @@ export default function Header({ categories }) {
   }, [menuOpen]);
 
 
-  // Category navigation
-  const handleCategoryClick = (category) => {
-    if (category.name.toLowerCase() === 'all') {
-      navigate('/');
-    } else {
-      navigate(`/${category.name.toLowerCase()}`);
-    }
-
-    if (window.innerWidth > 900) setMenuOpen(false);
-  };
-
   const isCategoryActive = (category) => {
     const pathname = location.pathname.toLowerCase();
 
@@ -99,7 +87,7 @@ export default function Header({ categories }) {
     }
 
     if (category.name.toLowerCase() === 'all') {
-      return pathname === '/';
+      return pathname === '/' || pathname === '/all' || pathname.startsWith('/all/');
     }
 
     return pathname.startsWith(`/${category.name.toLowerCase()}`);
@@ -127,28 +115,32 @@ export default function Header({ categories }) {
               className={`categories ${menuOpen ? 'open' : ''}`}
               ref={categoriesRef}
             >
-              {categories.map(c => (
-                <div
-                  key={c.id}
-                  className={`category ${isCategoryActive(c) ? "active" : ""}`}
-                  onClick={() => handleCategoryClick(c)}
-                  data-testid={isCategoryActive(c) ? 'active-category-link' : 'category-link'}
-                >
-                  {c.name}
-                </div>
-              ))}
+              {categories.map(c => {
+                const path = c.name.toLowerCase() === 'all' ? '/all' : `/${c.name.toLowerCase()}`;
+                return (
+                  <Link
+                    key={c.id}
+                    to={path}
+                    className={`category ${isCategoryActive(c) ? "active" : ""}`}
+                    onClick={() => { if (window.innerWidth <= 900) setMenuOpen(false); }}
+                    data-testid={isCategoryActive(c) ? 'active-category-link' : 'category-link'}
+                  >
+                    {c.name}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
           <div className="header-logo">
-            <Link to="/" className="logo-box">
+            <Link to="/all" className="logo-box">
               <img src={logo} alt="Logo" className="logo-icon" />
             </Link>
           </div>
 
           <div className="nav-right">
-            <div className="cart-icon" onClick={() => { setCartOpen(!cartOpen); if (!cartOpen) setMenuOpen(false); }}>
-              <img src={cartIcon} alt="Cart" className="cart-icon" />
+            <div className="cart-icon" data-testid="cart-btn" onClick={() => { setCartOpen(!cartOpen); if (!cartOpen) setMenuOpen(false); }}>
+              <img src={cartIcon} alt="Cart" className="cart-icon"/>
               {cartCount > 0 && (
                 <span className="cart-badge" aria-label={`${cartCount} items in cart`}>
                   {cartCount}

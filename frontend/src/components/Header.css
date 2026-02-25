@@ -178,6 +178,14 @@
 }
 
 /* === CART DROPDOWN === */
+.cart-overlay-root {
+  display: contents;
+}
+
+.cart-overlay-root[style*="display: none"] {
+  display: none;
+}
+
 .overlay {
   position: fixed;
   top: 78px;

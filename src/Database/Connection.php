@@ -5,9 +5,9 @@ namespace App\Database;
 class Connection
 {
     private $servername = "localhost";
-    private $username = "root";
-    private $password = "Root@1234"; 
-    private $dbname = "scandiweb_store";
+    private $username = "vladislavs";
+    private $password = "P@ssw0rd"; 
+    private $dbname = "scandishop_db";
 
     public function connect()
     {

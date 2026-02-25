@@ -149,6 +149,7 @@ export default function ProductDetails() {
                         selected ? " active" : ""
                       }`}
                       style={isColor ? { backgroundColor: item.value } : {}}
+                      data-testid={`product-attribute-${kebab}-${item.value}`}
                     >
                       {!isColor && (item.displayValue || item.value)}
                     </button>

@@ -9,14 +9,16 @@ export default function CartOverlay({
   onDecrease,
   onPlaceOrder,
 }) {
-  if (!cartOpen) return null;
-
   const itemLabel =
     cartCount === 1 ? `${cartCount} item` : `${cartCount} items`;
 
   return (
-    <>
-      <div className="overlay" onClick={onClose}></div>
+    <div
+      className="cart-overlay-root"
+      style={{ display: cartOpen ? undefined : "none" }}
+      aria-hidden={!cartOpen}
+    >
+      <div className="overlay" data-testid="cart-overlay" onClick={onClose}></div>
 
       <div className="cart-dropdown" ref={cartRef}>
         <div className="cart-content">
@@ -152,6 +154,6 @@ export default function CartOverlay({
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -9,15 +9,18 @@ export default function CategoryPage({ products, categories }) {
       (c) => c.name.toLowerCase() === categoryName?.toLowerCase()
     ) || { id: null, name: "All" };
 
-  const filteredProducts = products
-    .map((p) => {
-      const cat = categories.find((c) => c.id === p.category_id);
-      return {
-        ...p,
-        categoryName: cat?.name || "All",
-      };
-    })
-    .filter((p) => p.category_id === activeCategory?.id);
+  const productsWithCategory = products.map((p) => {
+    const cat = categories.find((c) => c.id === p.category_id);
+    return {
+      ...p,
+      categoryName: cat?.name || "All",
+    };
+  });
+
+  const isAllCategory = categoryName?.toLowerCase() === 'all';
+  const filteredProducts = isAllCategory
+    ? productsWithCategory
+    : productsWithCategory.filter((p) => p.category_id === activeCategory?.id);
 
   return (
     <MainContent
